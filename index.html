@@ -1,0 +1,1002 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>
+<title>BAV Upgrades Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: Mysa app shell (dark sidebar + light work area), right drawers for L1, centred modals for flows, slide-in panel for the case index. */
+/* Mysa platform palette (light only): sampled from icic.mysa.one — sidebar #091c1a, primary #00766a, active nav #2bb59a, stat bars blue/teal/amber, neutral greys. */
+:root{
+  --bg:#fdfdfd;--surface:#ffffff;--sunken:#fafafa;--line:#ececec;--line2:#dcdcde;
+  --fg:#1d1d1d;--muted:#6f7076;--side:#091c1a;--side-fg:#ffffff;--side-mute:#c3cbc9;--side-on:#2bb59a;
+  --accent:#00766a;--accent-h:#00665c;--accent-ink:#ffffff;--accent-soft:#e6f2f0;--link:#2a5bd7;--stat:#284cc7;
+  --ok:#2e8462;--ok-bg:#eaf6ef;--warn:#9e6a0b;--warn-bg:#fdf4e1;--bad:#c93a2f;--bad-bg:#fdeceb;
+  --grey:#6f7076;--grey-bg:#f1f1f2;--proto:#284cc7;--proto-bg:#eef2fd;--shadow:0 10px 40px rgba(9,28,26,.14);
+  color-scheme:light;--teal-tile:#effaf7;--avail:#ecf9f2;--avail-line:#bfe8d2;--amber-bar:#e2a93b;--teal-bar:#2b9b88;
+  --f-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;--f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.mono{font-family:var(--f-mono);font-size:12.5px}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.app{display:flex;min-height:100%}
+/* sidebar */
+.side{width:232px;flex:none;background:var(--side);color:var(--side-fg);display:flex;flex-direction:column;padding:18px 12px;gap:2px;position:sticky;top:0;height:100vh}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;padding:4px 10px 18px}
+.brand svg{width:22px;height:22px}
+.nav{display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;border:0;background:none;text-align:left;width:100%;color:var(--side-fg);font-size:14.5px}
+.nav:hover{background:rgba(255,255,255,.06)}
+.nav.on{color:var(--side-on)}
+.nav svg{width:18px;height:18px;flex:none}
+.sub{padding-left:40px;font-size:13.5px;color:var(--side-mute)}
+.sub.on{color:#fff;background:rgba(255,255,255,.07)}
+.side .grow{flex:1}
+.casebtn{border:1px dashed var(--side-mute);color:var(--side-fg);background:rgba(255,255,255,.06);border-radius:8px;padding:10px;font-weight:600;font-size:13px}
+/* main */
+main{flex:1;min-width:0;padding:22px 28px 60px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.top h1{font-size:21px;font-weight:600;margin:0;text-wrap:balance}
+.top .sp{flex:1}
+.btn{border:1px solid var(--line2);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{background:var(--sunken)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.pri:hover{background:var(--accent-h)}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:5px 10px;font-size:13px}
+.link{border:0;background:none;color:var(--link);padding:0;font-weight:500}
+.link:hover{text-decoration:underline}
+.proto{border:1px dashed var(--proto);background:var(--proto-bg);color:var(--proto);border-radius:8px;padding:8px 10px;font-size:12.5px}
+.proto label{font-weight:600;margin-right:6px}
+.proto select{border:1px solid var(--proto);border-radius:6px;background:var(--surface);padding:3px 6px;max-width:100%}
+.balcard{display:inline-flex;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-bottom:18px}
+.balcard .logo{width:44px;height:44px;border-radius:8px;border:1px solid var(--line);display:grid;place-items:center;font-weight:800;color:var(--bad);background:var(--surface)}
+.balcard b{font-size:20px;display:block}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 14px}
+.fchip{border:1px solid var(--line2);background:var(--surface);border-radius:8px;padding:6px 10px;display:inline-flex;gap:8px;align-items:center;font-size:13.5px}
+.fchip.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.fchip .ct{background:var(--grey-bg);border-radius:10px;padding:0 7px;font-size:12px;color:var(--fg)}
+.stats{display:flex;gap:28px;flex-wrap:wrap;margin-bottom:14px}
+.stat{border-left:3px solid var(--stat);padding-left:12px}
+.stat.y{border-color:var(--accent)}
+.stat small{display:block;color:var(--muted);font-size:12.5px}
+.stat b{font-size:17px;font-weight:600}
+.tw{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+th{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;text-align:left;padding:11px 14px;background:var(--sunken);border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tbody tr.click{cursor:pointer}
+tbody tr.click:hover td{background:var(--sunken)}
+td.r,th.r{text-align:right}
+.cb{width:16px;height:16px;accent-color:var(--accent)}
+.av{width:30px;height:30px;border-radius:50%;border:1px solid var(--line2);display:inline-grid;place-items:center;font-size:11.5px;font-weight:600;color:var(--muted);flex:none;background:var(--surface)}
+.who{display:flex;align-items:center;gap:10px}
+.vtabs{display:flex;align-items:flex-end;gap:26px;border-bottom:1px solid var(--line);margin-bottom:16px;flex-wrap:wrap}
+.vtabs span{padding:8px 4px;color:var(--muted);font-size:15px}
+.vtabs span.on{color:var(--fg);font-weight:600;border-bottom:2px solid var(--fg)}
+.vtabs .sp{flex:1}
+.vtabs .btn{margin-bottom:8px}
+.vicon{display:inline-flex;vertical-align:middle;margin-left:2px}
+.vicon svg{width:16px;height:16px}
+.band-h .gcta{margin-left:auto}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+/* chips */
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;white-space:nowrap;line-height:1.6}
+.s-ver{background:var(--ok-bg);color:var(--ok)}
+.s-man{background:var(--warn-bg);color:var(--warn)}
+.s-unv{background:var(--grey-bg);color:var(--grey)}
+.b-high{background:var(--ok-bg);color:var(--ok)}
+.b-mid{background:var(--warn-bg);color:var(--warn)}
+.b-low{background:var(--bad-bg);color:var(--bad)}
+.b-none{background:var(--grey-bg);color:var(--grey)}
+.active-chip{color:var(--ok);background:var(--ok-bg);border-radius:6px;padding:1px 8px;font-size:13px;font-weight:500}
+.acc{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;position:relative}
+.acc svg{width:16px;height:16px}
+.i-ver{color:var(--ok)}.i-man{color:var(--warn)}.i-unv{color:var(--grey)}
+.tip{position:relative}
+.tip .tipbox{display:none;position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 10px;border-radius:8px;font-size:12px;font-weight:500;white-space:nowrap;z-index:30;box-shadow:var(--shadow)}
+.ftip{position:fixed;z-index:80;background:var(--fg);color:var(--bg);padding:8px 10px;border-radius:8px;font-size:12px;font-weight:500;pointer-events:none;box-shadow:var(--shadow)}.ftip span{display:block}
+.tipbox span{display:block}
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(10,20,17,.35);z-index:40}
+#cases .scrim{z-index:47}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(720px,100%);background:var(--surface);z-index:41;overflow-y:auto;box-shadow:var(--shadow);padding:28px 34px 50px}
+.dh{display:flex;gap:16px;align-items:flex-start;margin-bottom:20px}
+.dh .av{width:58px;height:58px;font-size:18px}
+.dh h2{margin:4px 0 6px;font-size:21px;font-weight:600}
+.dh .sp{flex:1}
+.iconbtn{width:38px;height:38px;border:1px solid var(--line2);border-radius:8px;background:var(--surface);display:grid;place-items:center;flex:none}
+.tabs{display:flex;gap:22px;border-bottom:1px solid var(--line);margin:14px 0 20px}
+.tabs span{padding:8px 0;color:var(--muted)}
+.tabs span.on{color:var(--fg);font-weight:600;border-bottom:2px solid var(--fg)}
+.sechead{display:flex;align-items:center;justify-content:space-between;margin:6px 0 12px}
+.sechead h3{margin:0;font-size:17px;font-weight:500}
+.bank{background:var(--sunken);border-radius:12px;padding:14px;margin-bottom:14px}
+.bank .bh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:2px 4px 12px}
+.bank .bh b{font-weight:600;font-size:15px}
+.bank .bh .sp{flex:1}
+.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 24px;background:var(--surface);border-radius:10px;padding:16px 18px}
+.kv div{min-width:0}
+.kv small{display:block;color:var(--muted);font-size:12.5px;margin-bottom:3px}
+.kv span{overflow-wrap:anywhere}
+.bf{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 4px 2px;font-size:13px}
+.bf .sp{flex:1}
+.flag{display:flex;gap:8px;align-items:flex-start;color:var(--warn);font-size:13px}
+.flag svg{flex:none;width:16px;height:16px;margin-top:1px}
+.attempts{margin-top:10px;font-size:12.5px}
+.attempts summary{cursor:pointer;color:var(--muted)}
+.attempts table td,.attempts table th{padding:6px 8px;font-size:12px}
+.toggle{width:36px;height:20px;border-radius:10px;background:var(--side-on);position:relative;flex:none}
+.toggle:after{content:"";position:absolute;right:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#fff}
+/* modal */
+.mwrap{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;background:rgba(10,20,17,.45);overflow-y:auto}
+.modal{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);width:min(560px,100%);max-height:calc(100vh - 32px);display:flex;flex-direction:column}
+.modal.wide{width:min(860px,100%)}
+.mh{display:flex;align-items:flex-start;gap:12px;padding:20px 22px 12px}
+.mh h3{margin:0;font-size:18px;font-weight:600;flex:1;text-wrap:balance}
+.mh p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.mb{padding:4px 22px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.mb>*{flex-shrink:0}
+.mf{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;padding:14px 22px;border-top:1px solid var(--line);align-items:center}
+.mf .sp{flex:1}
+.x{border:0;background:none;width:30px;height:30px;border-radius:6px;display:grid;place-items:center;color:var(--muted)}
+.x:hover{background:var(--sunken)}
+.steps{display:flex;gap:6px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.steps span{padding:2px 8px;border-radius:6px;background:var(--sunken)}
+.steps span.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.steps span.done{color:var(--ok)}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:13px;font-weight:500}
+.field input{border:1px solid var(--line2);border-radius:8px;padding:9px 11px;background:var(--surface);width:100%}
+.field input:disabled{background:var(--sunken);color:var(--muted)}
+.field input.err{border-color:var(--bad)}
+.field .e{color:var(--bad);font-size:12.5px}
+.field .w{color:var(--warn);font-size:12.5px;display:flex;gap:6px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.banner{border-radius:10px;padding:11px 13px;display:flex;gap:10px;align-items:flex-start;font-size:13.5px}
+.banner svg{flex:none;width:18px;height:18px;margin-top:1px}
+.banner b{display:block}
+.banner.bad{background:var(--bad-bg);color:var(--bad)}
+.banner.warn{background:var(--warn-bg);color:var(--warn)}
+.banner.ok{background:var(--ok-bg);color:var(--ok)}
+.banner.info{background:var(--grey-bg);color:var(--fg)}
+.banner .sub2{color:var(--fg);opacity:.85;font-weight:400}
+.compare{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.compare .row{display:grid;grid-template-columns:150px minmax(0,1fr);gap:12px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.compare .row:last-child{border-bottom:0}
+.compare .row small{color:var(--muted)}
+.meta{font-size:12px;color:var(--muted)}
+.drop{border:1.5px dashed var(--line2);border-radius:10px;padding:18px;text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center}
+.drop.has{border-style:solid;background:var(--sunken);flex-direction:row;text-align:left;justify-content:space-between}
+.radio{display:flex;gap:10px;flex-wrap:wrap}
+.radio label{border:1px solid var(--line2);border-radius:8px;padding:8px 12px;display:flex;gap:8px;align-items:center;cursor:pointer}
+.radio label.on{border-color:var(--accent);background:var(--accent-soft)}
+.check{display:flex;gap:9px;align-items:flex-start;cursor:pointer}
+.check input{margin-top:3px}
+.otp{display:flex;gap:8px}
+.otp input{width:44px;height:48px;text-align:center;font-size:20px;border:1px solid var(--line2);border-radius:8px;background:var(--surface)}
+.spin{width:36px;height:36px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:sp 0.8s linear infinite;margin:10px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:3s}}
+.band-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;background:var(--sunken);border-bottom:1px solid var(--line)}
+.band-h small{color:var(--muted)}
+.grp{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.grp table{table-layout:fixed;min-width:620px}.grp table td{padding:9px 14px;overflow-wrap:anywhere}.grp col.c0{width:44px}.grp col.c3{width:120px}.grp col.c4{width:150px}
+.conflict{border:1px solid var(--warn);background:var(--warn-bg);border-radius:10px;padding:11px 13px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:13.5px}
+.conflict span{flex:1;min-width:220px}
+.why{border:1px solid var(--line);border-radius:10px}
+.why>button{width:100%;display:flex;align-items:center;gap:10px;border:0;background:none;padding:11px 14px;text-align:left}
+.why>button b{flex:1;font-weight:600}
+.why .inner{border-top:1px solid var(--line);overflow-x:auto}
+.chev{transition:transform .15s}
+.why.open .chev{transform:rotate(90deg)}
+/* cases panel */
+.cases{position:fixed;top:0;left:0;bottom:0;width:min(440px,100%);background:var(--surface);z-index:48;box-shadow:var(--shadow);overflow-y:auto;padding:22px 22px 40px}
+.cases h2{margin:0 0 4px;font-size:18px}
+.cgroup{margin-top:18px}
+.cgroup h4{margin:0 0 8px;font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--proto)}
+.case{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:8px;border:1px solid var(--line);margin-bottom:6px;width:100%;background:var(--surface);text-align:left}
+.case:hover{border-color:var(--proto);background:var(--proto-bg)}
+.case div{flex:1;min-width:0}
+.case b{display:block;font-weight:600;font-size:13.5px}
+.case small{color:var(--muted);font-size:12.5px}
+.case .go{color:var(--proto);font-weight:600;font-size:12.5px;white-space:nowrap}
+.note{font-size:12.5px;color:var(--muted);border-left:2px solid var(--line2);padding-left:10px;margin:6px 0}
+.codes td,.codes th{padding:6px 8px;font-size:12px;vertical-align:top}
+/* add account (live style) */
+.modal.addm{width:min(680px,100%)}
+.fwrap{display:flex;flex-direction:column;gap:5px;min-width:0}
+.fwrap .e{color:var(--bad);font-size:12.5px}
+.fwrap .w{color:var(--warn);font-size:12.5px;display:flex;gap:6px}
+.ff{border:1px solid var(--line2);border-radius:8px;padding:8px 10px 8px 14px;display:flex;align-items:center;gap:6px;background:var(--surface);min-height:62px}
+.ff:focus-within{border-color:var(--accent)}
+.ff.err{border-color:var(--bad)}
+.ff.dis{background:var(--sunken)}
+.ff .in{flex:1;min-width:0}
+.ff label{display:block;font-size:13px;color:var(--fg);font-weight:500}
+.ff input{border:0;outline:0;background:none;font-size:16px;width:100%;padding:2px 0;color:var(--fg)}
+.ff input:disabled{color:var(--fg)}
+.bankpanel{background:var(--sunken);border-radius:10px;padding:14px 18px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:10px 16px}
+.banklogo{width:22px;height:22px;border-radius:5px;background:var(--surface);border:1px solid var(--line);display:inline-grid;place-items:center;font-size:11px;font-weight:800;color:var(--bad)}
+.bavres{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.bavres .row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:16px;padding:11px 18px;border-bottom:1px solid var(--line);align-items:center}
+.bavres .row:last-child{border-bottom:0}
+.bavres small{color:var(--muted);font-size:14px}
+.divider{height:1px;background:var(--line);margin:2px 0}
+.acard{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.acard-h{display:flex;gap:10px;align-items:center;padding:11px 16px;background:var(--sunken);border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.acard-b{padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.acard-b>div{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.acard-b .muted{min-width:150px}
+/* live-app pieces */
+.nav{color:var(--side-fg)}
+.nav .chev2{margin-left:auto;width:16px;height:16px}
+.sub{color:var(--side-fg);padding-left:44px}
+.sub.on{color:var(--side-on);background:none}
+.sq{width:16px;height:16px;border:1px solid var(--line2);border-radius:3px;display:inline-block;background:var(--surface)}
+.pill{background:var(--fg);color:var(--surface);border-radius:10px;padding:0 7px;font-size:12px;font-weight:600}
+.ltabs{display:flex;align-items:flex-end;border-bottom:1px solid var(--line);margin:6px 0 14px;gap:20px;flex-wrap:wrap}
+.ltabs span.t{padding:8px 6px;font-weight:600;border-bottom:2px solid var(--fg);display:inline-flex;gap:8px;align-items:center}
+.ltabs .sp{flex:1}.ltabs .btn{margin-bottom:8px}
+.stat.teal{border-color:var(--teal-bar)}.stat.amb{border-color:var(--amber-bar)}
+.arrow{background:var(--accent);color:var(--accent-ink);border:0;border-radius:6px;width:34px;height:32px;display:inline-grid;place-items:center}
+.arrow:hover{background:var(--accent-h)}
+.sqbtn{border:1px solid var(--line2);background:var(--surface);border-radius:6px;width:34px;height:32px;display:inline-grid;place-items:center}
+.ov{position:fixed;inset:0;z-index:44;background:rgba(40,40,46,.55);display:flex}
+.ovp{background:var(--surface);overflow-y:auto;width:100%}
+.ovp.big{margin:28px auto;border-radius:14px;max-width:1400px;width:calc(100% - 56px);box-shadow:var(--shadow)}
+.ovh{display:flex;align-items:center;gap:12px;padding:18px 28px;border-bottom:1px solid var(--line)}
+.ovh h2{margin:0;font-size:21px;font-weight:500;flex:1}
+.ovb{padding:22px 28px 40px;display:flex;flex-direction:column;gap:18px}
+.toprow{display:flex;gap:18px;flex-wrap:wrap}
+.bankmini{border:1px solid var(--line);background:var(--sunken);border-radius:12px;padding:14px 18px;display:flex;gap:12px;align-items:center;min-width:260px;flex:0 1 420px}
+.bankmini .logo{width:40px;height:40px;border-radius:8px;border:1px solid var(--line);display:grid;place-items:center;font-weight:800;color:var(--bad);background:var(--surface);flex:none}
+.bankmini b{font-size:19px;display:block}
+.sumtile{background:var(--teal-tile);border-radius:12px;padding:14px 22px;display:flex;gap:30px;align-items:center;flex:1;flex-wrap:wrap;min-width:0}
+.sumtile .stat{border-color:var(--teal-bar)}
+.sumtile .btn{margin-left:auto;padding:12px 22px;font-size:15px}
+.tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tools .sp{flex:1}
+.vgrp{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.vgrp-h{display:flex;gap:12px;padding:12px 16px;background:var(--sunken);align-items:center;flex-wrap:wrap;font-size:14.5px}
+.vgrp-h .sp{flex:1}
+.vgrp-h .div{width:1px;height:18px;background:var(--line2)}
+.avail{background:var(--avail);border:1px solid var(--avail-line);border-bottom:0;border-radius:10px 10px 0 0;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.avail+.tw{border-radius:0 0 10px 10px}
+.menu{position:absolute;right:0;top:34px;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);z-index:5;min-width:190px;padding:4px}
+.menu button{display:block;width:100%;text-align:left;border:0;background:none;padding:8px 10px;border-radius:6px}
+.menu button:hover{background:var(--sunken)}
+.selbar{display:flex;align-items:center;gap:10px}
+/* toasts */
+.toasts{position:fixed;top:calc(16px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:70;display:flex;flex-direction:column;gap:8px;align-items:center;width:min(520px,calc(100% - 32px))}
+.toast{background:var(--fg);color:var(--bg);padding:11px 16px;border-radius:10px;box-shadow:var(--shadow);font-size:13.5px;width:100%}
+@media (max-width:820px){
+  .app{flex-direction:column}
+  .side{width:100%;height:auto;position:static;flex-direction:row;flex-wrap:wrap;padding:10px 16px;gap:4px}
+  .side .grow,.sub{display:none}
+  .brand{padding:6px 8px}
+  .nav{width:auto;padding:7px 9px;font-size:13px}
+  .nav span.lbl{display:none}
+  main{padding:16px 16px 60px}
+  .drawer{padding:20px 16px 40px}
+  .kv,.grid2{grid-template-columns:minmax(0,1fr)}
+  .compare .row{grid-template-columns:minmax(0,1fr)}
+  .otp input{width:38px}
+}
+</style>
+
+<div class="app">
+  <aside class="side" id="side"></aside>
+  <main id="main"></main>
+</div>
+<div id="overlay"></div>
+<div id="drawer"></div>
+<div id="cases"></div>
+<div id="modal"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+/* ---------------- icons ---------------- */
+const IC={
+ home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11l8-7 8 7v9H4z"/></svg>',
+ bill:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>',
+ vendor:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 20v-6h4v6"/></svg>',
+ pay:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l18-8-8 18-2-8z"/></svg>',
+ bankI:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-5 9 5M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18"/></svg>',
+ ver:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l8 3v6c0 5-3.5 9.5-8 11-4.5-1.5-8-6-8-11V5z" opacity=".18"/><path d="M12 2l8 3v6c0 5-3.5 9.5-8 11-4.5-1.5-8-6-8-11V5z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 12l2.5 2.5 4.5-5" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
+ man:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l8 3v6c0 5-3.5 9.5-8 11-4.5-1.5-8-6-8-11V5z" opacity=".18"/><path d="M12 2l8 3v6c0 5-3.5 9.5-8 11-4.5-1.5-8-6-8-11V5z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v6M12 16v.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
+ unv:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l8 3v6c0 5-3.5 9.5-8 11-4.5-1.5-8-6-8-11V5z"/><path d="M5 5l14 14"/></svg>',
+ alert:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5" stroke-linecap="round"/></svg>',
+ info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5" stroke-linecap="round"/></svg>',
+ okc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>',
+ x:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+ chev:'<svg class="chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>',
+ file:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg>',
+ up:'<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>',
+ cart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 4h3l2 11h11l2-8H7"/><circle cx="10" cy="19" r="1.5"/><circle cx="18" cy="19" r="1.5"/></svg>'
+};
+
+/* ---------------- helpers ---------------- */
+const ME='Anandhu K';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const inr=n=>'₹'+Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const today=()=>{const d=new Date();return String(d.getDate()).padStart(2,'0')+' '+MON[d.getMonth()]+' '+String(d.getFullYear()).slice(2)};
+const nowT=()=>{const d=new Date();return today()+', '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+const initials=n=>n.split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+const last4=a=>String(a).slice(-4);
+const band=s=>s==null?'none':s>=75?'high':s>=30?'mid':'low';
+const BAND_LBL={high:'≥75% · High match',mid:'30%–<75% · Partial match',low:'<30% · Low match',none:'No name match score'};
+const bandChip=s=>s==null?'<span class="chip b-none">—</span>':`<span class="chip b-${band(s)} num">${s}%</span>`;
+const ST={ 'Verified':['s-ver','ver','i-ver'],'Manually Verified':['s-man','man','i-man'],'Unverified':['s-unv','unv','i-unv'] };
+const statusChip=st=>`<span class="chip ${ST[st][0]}">${IC[ST[st][1]].replace('<svg','<svg width="13" height="13"')} ${st}</span>`;
+const acctLabel=a=>`${a.bank} A/C xx${last4(a.acno)}`;
+function accCell(a){ // L0 column: "HDFC xx4521 · ✓ 92%"
+  const [ ,ic,cl]=ST[a.status];
+  return `<span class="acc tip" tabindex="0">${esc(a.bank)} xx${last4(a.acno)} <span class="${cl}" style="display:inline-flex">${IC[ic]}</span><span class="num muted">${a.score==null?'—':a.score+'%'}</span>
+   <span class="tipbox"><span>Status: ${a.status}</span><span>Name match: ${a.score==null?'No score':a.score+'%'}</span></span></span>`;
+}
+function plainVendor(v){return `<div class="who"><span class="av">${initials(v.name)}</span>${esc(v.name)}</div>`}
+function accIcon(a){return `<span class="vicon tip ${ST[a.status][2]}" tabindex="0" aria-label="${a.status}, name match ${a.score==null?'not available':a.score+'%'}">${IC[ST[a.status][1]]}<span class="tipbox"><span>Status: ${a.status}</span><span>Name match: ${a.score==null?'—':a.score+'%'}</span></span></span>`}
+function accountCell(a){return `<span style="white-space:nowrap">${acctLabel(a)} ${accIcon(a)}</span>`}
+function vendorCell(v,a,extra=''){
+ const icon=a?`<span class="vicon tip ${ST[a.status][2]}" tabindex="0" aria-label="${a.status}, name match ${a.score==null?'not available':a.score+'%'}">${IC[ST[a.status][1]]}<span class="tipbox"><span>Status: ${a.status}</span><span>Name match: ${a.score==null?'—':a.score+'%'}</span></span></span>`:'';
+ return `<div class="who"><span class="av">${initials(v.name)}</span><div><span style="white-space:nowrap">${esc(v.name)} ${icon}</span>${extra}</div></div>`;
+}
+function toast(msg){const t=document.createElement('div');t.className='toast';t.innerHTML=msg;const T=$('#toasts');while(T.children.length>1)T.firstChild.remove();T.appendChild(t);setTimeout(()=>t.remove(),4200)}
+
+/* ---------------- Bureau response catalogue (PRD: Response / Status Codes Reference) ---------------- */
+const R={
+ v92:{code:200,msg:'Valid Account',kind:'valid',score:92,label:'200 · Valid Account · match 92% (≥75%)'},
+ v58:{code:200,msg:'Valid Account',kind:'valid',score:58,label:'200 · Valid Account · match 58% (30%–<75%)'},
+ v18:{code:200,msg:'Valid Account',kind:'valid',score:18,label:'200 · Valid Account · match 18% (<30%)'},
+ invAcc:{code:200,msg:'Invalid Account Number',kind:'wrong',field:'acno',copy:"This account number doesn't exist at the branch for this IFSC. Check the number and try again."},
+ invIfsc:{code:200,msg:'Invalid IFSC Number',kind:'wrong',field:'ifsc',copy:"This IFSC doesn't map to a valid branch. Check the code and try again."},
+ b400acc:{code:400,msg:'Account number is invalid',kind:'wrong',field:'acno',copy:'The account number format or length is invalid. Check it and try again.'},
+ b400ifsc:{code:400,msg:'IFSC is invalid',kind:'wrong',field:'ifsc',copy:"The IFSC format is incorrect or doesn't match an RBI-recognised branch. It should look like HDFC0001234."},
+ blocked:{code:200,msg:'Account Blocked',kind:'reject',copy:"The bank has blocked or frozen this account, so it can't receive payments. It can't be added."},
+ nre:{code:200,msg:'NRE Account Fail',kind:'reject',copy:"This is an NRE account. NRE accounts can't receive domestic IMPS or NEFT payments, so it can't be added."},
+ closed:{code:200,msg:'Account Closed',kind:'reject',copy:"The bank has permanently closed this account. It can't be added."},
+ fraud:{code:422,msg:'Fraud activity detected for this account.',kind:'reject',copy:"The bank or NPCI has flagged this account for suspicious activity. It can't be added."},
+ g500:{code:500,msg:'Internal Server Error',kind:'gateway'},
+ g503a:{code:503,msg:'Failed at bank',kind:'gateway'},
+ g503b:{code:503,msg:'Npci unavailable',kind:'gateway'},
+ g503c:{code:503,msg:'Connection timeout from bank',kind:'gateway'},
+ g503d:{code:503,msg:'Bene bank declined',kind:'gateway'},
+ g503e:{code:503,msg:'Source bank declined',kind:'gateway'},
+ g503f:{code:503,msg:'IMPS mode fail',kind:'gateway'},
+ g503g:{code:503,msg:'Beneficiary bank offline',kind:'gateway'},
+ g504:{code:504,msg:'Endpoint request timed out',kind:'gateway'},
+ inproc:{code:503,msg:'Verification already under process.',kind:'inproc'}
+};
+const RGROUPS=[['Valid account',['v92','v58','v18']],['Wrong data entered',['invAcc','invIfsc','b400acc','b400ifsc']],['Bank rejects account',['blocked','nre','closed','fraud']],['API gateway error',['g500','g503a','g503b','g503c','g503d','g503e','g503f','g503g','g504']],['Other',['inproc']]];
+const rLabel=k=>R[k].label||`${R[k].code} · ${R[k].msg}`;
+function nameAtBank(name,score){
+  const n=name.trim().toUpperCase();
+  if(score>=75) return n.replace(/\bPVT\b/,'PRIVATE').replace(/\bLTD\b/,'LIMITED');
+  if(score>=30) return n.split(/\s+/)[0]+' TRADING AND SERVICES';
+  return 'RAMESH KUMAR GUPTA';
+}
+
+/* ---------------- seed data (example records) ---------------- */
+let seq=100;const acct=o=>Object.assign({id:'a'+(seq++),successCount:0,doc:null,method:'Penny-less',verifiedBy:null,verifiedOn:null,addedBy:'Swathi CG',addedOn:'15 Sep 26'},o);
+let S;
+function seed(){
+ const V=[
+  {id:'v1',name:'Sharma Logistics Pvt Ltd',state:'Maharashtra',gst:'27AAKCS4821M1Z5',accounts:[acct({bank:'HDFC',acno:'50100234564521',ifsc:'HDFC0001234',nameMysa:'Sharma Logistics Pvt Ltd',nameBank:'SHARMA LOGISTICS PRIVATE LIMITED',score:92,status:'Verified',addedBy:ME,addedOn:'12 Sep 26',verifiedBy:'Swathi CG',verifiedOn:'12 Sep 26',successCount:4})]},
+  {id:'v2',name:'Kaveri Packaging',state:'Tamil Nadu',gst:'33ABHPK7710Q1Z2',accounts:[acct({bank:'ICICI',acno:'000405550087',ifsc:'ICIC0000405',nameMysa:'Kaveri Packaging',nameBank:'S MURUGESAN',score:22,status:'Manually Verified',method:'Penny drop',doc:{type:'Cancelled cheque',name:'kaveri_cancelled_cheque.pdf'},addedBy:'Swathi CG',addedOn:'18 Sep 26',verifiedBy:'Swathi CG',verifiedOn:'18 Sep 26'})]},
+  {id:'v3',name:'Greenleaf Farms LLP',state:'Karnataka',gst:'29AAJFG2290L1ZX',accounts:[acct({bank:'SBI',acno:'38211903310',ifsc:'SBIN0004421',nameMysa:'Greenleaf Farms LLP',nameBank:'GREENLEAF FARMS LLP',score:81,status:'Unverified',addedBy:'Divyang C',addedOn:'22 Sep 26'})]},
+  {id:'v4',name:'Om Sai Traders',state:'Gujarat',gst:'24AEZPS9182K1Z9',accounts:[acct({bank:'Axis',acno:'919020047764',ifsc:'UTIB0000552',nameMysa:'Om Sai Traders',nameBank:'OM SAI ENTERPRISES',score:54,status:'Unverified',addedBy:'Divyang C',addedOn:'23 Sep 26'})]},
+  {id:'v5',name:'Bluewave Technologies',state:'Kerala',gst:'32AAHCB5531F1ZQ',accounts:[acct({bank:'Kotak',acno:'7712401209',ifsc:'KKBK0000811',nameMysa:'Bluewave Technologies',nameBank:'PRAKASH R NAIR',score:18,status:'Unverified',method:'Penny drop',addedBy:ME,addedOn:'24 Sep 26'})]},
+  {id:'v6',name:'Nimbus Freight Co',state:'Delhi',gst:'07AAMFN6620B1Z1',accounts:[acct({bank:'IDFC',acno:'10045285532',ifsc:'IDFB0040101',nameMysa:'Nimbus Freight Co',nameBank:'NIMBUS FREIGHT AND CARGO SERVICES',score:47,status:'Verified',verifiedBy:'Swathi CG',verifiedOn:'16 Sep 26',successCount:2})]},
+  {id:'v7',name:'Riya Enterprises',state:'Rajasthan',gst:'08ABQPR3307H1ZK',accounts:[acct({bank:'Yes Bank',acno:'002190009001',ifsc:'YESB0000021',nameMysa:'Riya Enterprises',nameBank:null,score:null,method:null,status:'Unverified',note:'Last BAV: 503 · Beneficiary bank offline'})]},
+  {id:'v8',name:'Sunrise Prints',state:'Maharashtra',gst:'27AAPFS1188N1ZD',accounts:[acct({bank:'ICICI',acno:'001205556650',ifsc:'ICIC0001205',nameMysa:'Sunrise Prints',nameBank:'K L JOSHI',score:12,status:'Manually Verified',method:'Penny drop',doc:{type:'Other supporting document',name:'sunrise_bank_letter.png'},verifiedBy:ME,verifiedOn:'02 Sep 26',successCount:1})]},
+  {id:'v9',name:'Metro Cold Chain',state:'Telangana',gst:'36AAICM7012R1ZT',accounts:[acct({bank:'Canara',acno:'1234101011420',ifsc:'CNRB0001234',nameMysa:'Metro Cold Chain',nameBank:'METRO TRADING CO',score:24,status:'Verified',method:'Yes Bank (legacy)',verifiedBy:'Migrated from Yes Bank',verifiedOn:'01 Aug 26',addedOn:'01 Aug 26'})]},
+  {id:'v10',name:'Lotus Hardware Pvt Ltd',state:'Punjab',gst:'03AACCL4419P1Z6',accounts:[]},
+  {id:'v11',name:'Arihant Steel Corporation',state:'Maharashtra',gst:'27AABCA6612J1Z3',accounts:[acct({bank:'HDFC',acno:'50200098761188',ifsc:'HDFC0000060',nameMysa:'Arihant Steel Corporation',nameBank:'ARIHANT STEEL CORPORATION',score:98,status:'Verified',verifiedBy:'Swathi CG',verifiedOn:'10 Sep 26',successCount:6})]},
+  {id:'v12',name:'Coastal Spices Exports',state:'Kerala',gst:'32AAFCC2210E1Z8',accounts:[acct({bank:'ICICI',acno:'004101552290',ifsc:'ICIC0000041',nameMysa:'Coastal Spices Exports',nameBank:'COASTAL SPICES EXPORTS PVT LTD',score:76,status:'Unverified',addedBy:'Divyang C',addedOn:'26 Sep 26'})]},
+  {id:'v13',name:'Deccan Electricals',state:'Telangana',gst:'36AAPFD8890K1ZB',accounts:[acct({bank:'Axis',acno:'920010033318890',ifsc:'UTIB0001190',nameMysa:'Deccan Electricals',nameBank:'DECCAN POWER SYSTEMS',score:41,status:'Unverified',addedBy:ME,addedOn:'27 Sep 26'})]},
+  {id:'v14',name:'Evergreen Facility Services',state:'Karnataka',gst:'29AAHFE3021M1Z4',accounts:[acct({bank:'SBI',acno:'40021187730',ifsc:'SBIN0007731',nameMysa:'Evergreen Facility Services',nameBank:'MANJUNATH S',score:9,status:'Unverified',method:'Penny drop',addedBy:'Swathi CG',addedOn:'28 Sep 26'})]},
+  {id:'v15',name:'Fortune Print House',state:'Delhi',gst:'07AAJFF2214Q1ZP',accounts:[acct({bank:'Kotak',acno:'8812402214',ifsc:'KKBK0004561',nameMysa:'Fortune Print House',nameBank:'VIKAS AGGARWAL',score:27,status:'Manually Verified',method:'Penny drop',doc:{type:'Cancelled cheque',name:'fortune_cheque.jpg'},verifiedBy:'Divyang C',verifiedOn:'29 Sep 26'})]},
+  {id:'v16',name:'Ganesh Transport Co',state:'Gujarat',gst:'24AAKFG1190H1Z2',accounts:[acct({bank:'IDFC',acno:'10077341190',ifsc:'IDFB0041122',nameMysa:'Ganesh Transport Co',nameBank:'SHREE GANESH ROADWAYS',score:63,status:'Verified',verifiedBy:ME,verifiedOn:'19 Sep 26',successCount:3})]},
+  {id:'v17',name:'Horizon IT Solutions',state:'Tamil Nadu',gst:'33AAGCH0045D1Z7',accounts:[acct({bank:'HDFC',acno:'50100445500045',ifsc:'HDFC0002211',nameMysa:'Horizon IT Solutions',nameBank:null,score:null,method:null,status:'Unverified',note:'Last BAV: 504 · Endpoint request timed out'})]},
+  {id:'v18',name:'Indus Office Supplies',state:'Punjab',gst:'03AAFFI7781C1ZQ',accounts:[acct({bank:'ICICI',acno:'002301117781',ifsc:'ICIC0000023',nameMysa:'Indus Office Supplies',nameBank:'INDUS OFFICE SUPPLIES',score:100,status:'Verified',verifiedBy:'Swathi CG',verifiedOn:'05 Sep 26',successCount:9})]}
+ ];
+ const A=id=>V.find(v=>v.id===id).accounts[0]?.id;
+ const meta={v1:['Logistics',32450,45000],v2:['Packaging',186000,0],v3:['Raw materials',14200,0],v4:['Ops, Others',46300,0],v5:['IT Services',51000,0],v6:['Logistics',74300,62000],v7:['Ops, Others',8900,0],v8:['Marketing',9800,12400],v9:['Logistics',19750,0],v10:['Hardware',0,0],v11:['Raw materials',558000,310000],v12:['Raw materials',88900,0],v13:['Maintenance',35600,0],v14:['Facilities',139800,0],v15:['Marketing',23400,0],v16:['Logistics',50200,8450],v17:['IT Services',86000,0],v18:['Office supplies',6540,4200]};
+ V.forEach(v=>{[v.category,v.outstanding,v.spend]=meta[v.id]});
+ const B=[['v1','INV-2291',32450,'08 Oct'],['v1','INV-2304',18200,'12 Oct'],['v11','AS/26/0412',248000,'09 Oct'],['v18','IOS-7781',6540,'10 Oct'],['v6','NF-2026-044',12300,'15 Oct'],['v16','GT-1190',41750,'11 Oct'],
+  ['v9','MCC-901',19750,'18 Oct'],['v2','KP-3310',66000,'15 Oct'],['v15','FPH-221',23400,'13 Oct'],['v8','SP-0918',7250,'14 Oct'],['v3','GF/24-25/118',14200,'10 Oct'],['v12','CSE-5501',88900,'16 Oct'],
+  ['v4','OST-0912',27800,'11 Oct'],['v13','DE/889',35600,'12 Oct'],['v5','BW-INV-5520',51000,'12 Oct'],['v14','EFS-3021',112500,'17 Oct'],['v7','RE/772',8900,'14 Oct'],['v17','HIT-0045',64000,'19 Oct']];
+ const bills=B.map(([v,no,amt,due],i)=>({id:'b'+i,vendorId:v,acctId:A(v),billNo:no,amount:amt,dueAmt:Math.round(amt*0.98*100)/100,due}));
+ const pend=[['v2',120000,'Swathi CG','Kaveri Sept packaging'],['v1',45000,'Divyang C','Sharma freight Sept'],['v4',18500,'Swathi CG','Om Sai Q3 supplies'],['v6',62000,'Divyang C','Nimbus Sept freight'],
+  ['v8',9800,'Swathi CG','Sunrise brochures'],['v11',310000,'Divyang C','Arihant steel lot 14'],['v14',27300,'Swathi CG','Evergreen housekeeping Sept'],['v9',15600,'Divyang C','Metro cold storage Sept'],
+  ['v17',22000,'Swathi CG','Horizon AMC Q3'],['v16',8450,ME,'Ganesh local transport'],['v13',12800,ME,'Deccan wiring work'],['v12',54000,'Divyang C','Coastal pepper advance']]
+   .map(([v,amt,by,t],i)=>({id:'p'+i,vendorId:v,acctId:A(v),amount:amt,status:i%4===3?'In Approval':'In Auth',createdBy:by,title:t,payOn:['07 Oct','08 Oct','09 Oct'][i%3]}));
+ S={view:'ready',vendors:V,bills,pending:pend,txns:[],ready:new Set(),c1:[],c1sel:new Set(),c2:[],overlay:null,c2menu:null,pendSel:new Set(),drawer:null,cases:false,attempts:{},log:[],suppressAfter:1,M:null};
+}
+seed();
+const vendorOf=id=>S.vendors.find(v=>v.id===id);
+const accById=id=>{for(const v of S.vendors){const a=v.accounts.find(a=>a.id===id);if(a)return a}return null};
+const vendorOfAcc=id=>S.vendors.find(v=>v.accounts.some(a=>a.id===id));
+
+/* risk (PRD: Payment warning for risky beneficiary accounts) */
+function riskReason(a){
+ if(!a) return null;
+ if(a.successCount>=S.suppressAfter) return null;      // repeat-payment suppression
+ if(a.status==='Manually Verified') return 'manual';
+ if(a.status==='Unverified') return 'unverified';
+ if(a.score!=null&&a.score<30) return 'low';
+ return null;
+}
+const REASON={low:'Low name match (<30%)',manual:'Manually verified account',unverified:'Unverified account'};
+
+/* ---------------- sidebar ---------------- */
+function renderSide(){
+ const sub=(v,l)=>`<button class="nav sub ${S.view===v?'on':''}" onclick="go('${v}')"><span class="lbl">${l}</span></button>`;
+ const dn='<svg class="chev2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>',up='<svg class="chev2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 15l6-6 6 6"/></svg>';
+ $('#side').innerHTML=`<div class="brand"><svg viewBox="0 0 24 24" fill="#2bb59a"><path d="M3 11l18-8-8 18-2-8z"/></svg>mysa</div>
+  <button class="nav">${IC.home}<span class="lbl">Home</span></button>
+  <button class="nav">${IC.bill}<span class="lbl">Bills</span></button>
+  <button class="nav ${S.view==='vendors'?'on':''}" onclick="go('vendors')">${IC.vendor}<span class="lbl">Vendors</span></button>
+  <button class="nav">${IC.bill}<span class="lbl">Items</span></button>
+  <button class="nav" onclick="go('ready')">${IC.pay}<span class="lbl">Payments</span>${up}</button>
+  ${sub('ready','Ready To Pay')}${sub('pending','Pending On Me')}<button class="nav sub"><span class="lbl">Pending On Others</span></button>${sub('txns','All Transactions')}
+  <button class="nav">${IC.bankI}<span class="lbl">Smart Statement</span></button>
+  <button class="nav">${IC.bill}<span class="lbl">Accounting</span></button>
+  <button class="nav">${IC.bill}<span class="lbl">Reports</span>${dn}</button>
+  <button class="nav">${IC.vendor}<span class="lbl">Settings</span>${dn}</button>
+  <div class="grow"></div>
+  <button class="casebtn" onclick="toggleCases()">User stories &amp; cases</button>`;
+}
+function go(v){S.view=v;S.drawer=null;S.overlay=null;render()}
+
+/* ---------------- views ---------------- */
+function topbar(title,right=''){return `<div class="top"><h1>${title}</h1><span class="sp"></span>${right}<button class="btn sm" onclick="resetAll()" title="Reset prototype data">Reset data</button></div>`}
+function resetAll(){seed();render();toast('Prototype data reset.')}
+
+function viewVendors(){
+ const rows=S.vendors.map(v=>`<tr class="click" onclick="openVendor('${v.id}')"><td onclick="event.stopPropagation()"><input type="checkbox" class="cb" aria-label="Select vendor"></td>
+  <td><div class="who"><span class="av">${initials(v.name)}</span>${esc(v.name)}</div></td>
+  <td>${esc(v.category)}</td><td class="mono">${v.gst}</td><td class="mono">${v.gst.slice(2,12)}</td><td class="r num">${inr(v.outstanding)}</td><td class="r num">${v.spend?inr(v.spend):'--'}</td></tr>`).join('');
+ return topbar('Vendor Directory','<button class="btn sm">▶ Guides</button>')+
+  `<div class="vtabs"><span class="on">Active</span><span>Inactive</span><span>Invited</span><span class="sp"></span><button class="btn pri">+ Add Vendor</button></div>
+  <div class="filters"><span class="muted">Filters:</span><span class="fchip">More Filters ▾</span></div>
+  <div class="filters" style="justify-content:space-between"><div class="stat"><small>Total Vendors</small><b class="num">${S.vendors.length}</b></div><button class="btn">Export</button></div>
+  <div class="tw"><table><thead><tr><th></th><th>Vendor</th><th>Category</th><th>GSTIN</th><th>PAN</th><th class="r">Outstanding</th><th class="r">This month's spend</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function balcard(){return `<div class="balcard"><div class="logo">i</div><div><span class="muted" style="font-size:13px">ICICI A/C xx3121</span><b class="num">₹1,11,11,30,051.45</b><span class="meta">04 May 26, 02:14 PM</span></div></div>`}
+function bankMini(change){return `<div class="bankmini"><div class="logo">i</div><div style="flex:1"><span class="muted" style="font-size:13px">ICICI A/C xx3121</span><b class="num">₹1,11,11,30,051.45</b><span class="meta">04 May 26, 02:14 PM</span></div>${change?'<span class="btn sm">Change ▾</span>':''}</div>`}
+function tgl(set,id){set.has(id)?set.delete(id):set.add(id);render()}
+function tglAll(set,ids){const all=ids.every(i=>set.has(i));ids.forEach(i=>all?set.delete(i):set.add(i));render()}
+
+/* Ready To Pay (bills) */
+function viewReady(){
+ const ids=S.bills.map(b=>b.id),n=S.ready.size;
+ const tb=S.bills.reduce((s,b)=>s+b.amount,0),td=S.bills.reduce((s,b)=>s+b.dueAmt,0);
+ const rows=S.bills.map(b=>{const v=vendorOf(b.vendorId);
+  return `<tr><td><input type="checkbox" class="cb" ${S.ready.has(b.id)?'checked':''} onchange="tgl(S.ready,'${b.id}')" aria-label="Select bill"></td>
+  <td>${plainVendor(v)}</td><td class="mono">${b.billNo}</td><td>${IC.file.replace('<svg','<svg style="color:var(--accent)"')}</td><td class="r num">${inr(b.amount)}</td><td class="r num">${inr(b.dueAmt)}</td><td>${b.due}</td>
+  <td style="white-space:nowrap;text-align:right"><button class="sqbtn" aria-label="More">⋮</button> <button class="arrow" onclick="toCart1(['${b.id}'])" aria-label="Pay this bill">›</button></td></tr>`}).join('');
+ return topbar('Payments / Ready To Pay','<button class="btn sm">▶ Guides</button>')+balcard()+
+  `<div class="ltabs"><span class="t">Bills <span class="pill">${S.bills.length}</span></span><span class="sp"></span>${n?`<button class="btn pri" onclick="toCart1([...S.ready])">Pay selected (${n})</button>`:''}<button class="btn">Direct Pay</button></div>
+  <div class="filters"><span class="muted">Filters:</span><span class="fchip">Overdue <span class="sq"></span></span><span class="fchip">Hide on-hold bills <span class="sq"></span></span><span class="fchip">High Priority <span class="sq"></span></span><span class="fchip">More Filters ▾</span><span style="flex:1"></span><span class="fchip">Sort &amp; Group by: Recommended ▾</span></div>
+  <div class="filters" style="justify-content:space-between"><div class="stats" style="margin:0"><div class="stat"><small>Total count</small><b class="num">${S.bills.length}</b></div><div class="stat teal"><small>Total Bill Amount</small><b class="num">${inr(tb)}</b></div><div class="stat amb"><small>Total Due Amount</small><b class="num">${inr(td)}</b></div></div><button class="btn">Export</button></div>
+  <div class="tw"><table><thead><tr><th><input type="checkbox" class="cb" ${ids.length&&ids.every(i=>S.ready.has(i))?'checked':''} onchange="tglAll(S.ready,${JSON.stringify(ids).replace(/"/g,"'")})" aria-label="Select all"></th><th>Vendor</th><th>ID</th><th>Doc</th><th class="r">Bill amount</th><th class="r">Due amount</th><th>Due date</th><th class="r">Actions</th></tr></thead><tbody>${rows||'<tr><td colspan="8" class="empty">No bills ready to pay.</td></tr>'}</tbody></table></div>`;
+}
+function toCart1(ids){S.c1=[...new Set(ids)];S.c1sel=new Set(S.c1);S.overlay='c1';S.ready.clear();render()}
+
+/* group bills by beneficiary account */
+function groupByAcc(billIds){const g=new Map();billIds.map(id=>S.bills.find(b=>b.id===id)).filter(Boolean).forEach(b=>{if(!g.has(b.acctId))g.set(b.acctId,[]);g.get(b.acctId).push(b)});return [...g.entries()]}
+function payments(){return groupByAcc(S.c2).map(([acctId,bs])=>({id:'pay_'+acctId,vendorId:bs[0].vendorId,acctId,bills:bs.map(b=>b.id),billNos:bs.map(b=>b.billNo),amount:bs.reduce((s,b)=>s+b.dueAmt,0),due:bs[0].due}))}
+
+/* Cart 1 · Select Bills to Pay */
+function cart1HTML(){
+ const groups=groupByAcc(S.c1);const sel=S.c1.filter(id=>S.c1sel.has(id)).map(id=>S.bills.find(b=>b.id===id));
+ const vendors=new Set(sel.map(b=>b.vendorId)).size,amt=sel.reduce((s,b)=>s+b.dueAmt,0);
+ const grp=groups.map(([aid,bs])=>{const a=accById(aid),v=vendorOf(bs[0].vendorId);const n=bs.filter(b=>S.c1sel.has(b.id)).length;
+  return `<div class="vgrp"><div class="vgrp-h"><span>⌄</span><span>${n} / ${bs.length} selected</span><span class="div"></span><b style="font-weight:500">${esc(v.name)} • ${acctLabel(a)} • Head Quarter</b><span class="sp"></span><span>To Pay: <b class="num" style="font-weight:500">${inr(bs.filter(b=>S.c1sel.has(b.id)).reduce((s,b)=>s+b.dueAmt,0))}</b></span></div>
+  <div style="overflow-x:auto"><table><thead><tr><th></th><th>Vendor</th><th>Bill ID</th><th>Bill</th><th class="r">Bill amount</th><th class="r">Due amount</th><th class="r">To pay</th><th>Due date</th><th class="r">Actions</th></tr></thead><tbody>
+  ${bs.map(b=>`<tr><td><input type="checkbox" class="cb" ${S.c1sel.has(b.id)?'checked':''} onchange="tgl(S.c1sel,'${b.id}')" aria-label="Select bill"></td><td>${plainVendor(v)}</td><td class="mono">${b.billNo}</td><td>${IC.file.replace('<svg','<svg style="color:var(--accent)"')}</td><td class="r num">${inr(b.amount)}</td><td class="r num">${inr(b.dueAmt)}</td><td class="r num">${inr(b.dueAmt)}</td><td>${b.due}</td><td class="r"><button class="sqbtn" aria-label="More">⋮</button></td></tr>`).join('')}</tbody></table></div></div>`}).join('');
+ return `<div class="ov"><div class="ovp" role="dialog" aria-modal="true" aria-labelledby="c1t"><div class="ovh"><h2 id="c1t">Select Bills to Pay</h2><button class="iconbtn" onclick="S.overlay=null;render()" aria-label="Close">${IC.x}</button></div>
+ <div class="ovb"><div class="toprow">${bankMini(true)}<div class="sumtile"><div class="stat"><small>No of bills</small><b class="num">${sel.length}</b></div><div class="stat"><small>No of vendors</small><b class="num">${vendors}</b></div><div class="stat"><small>Amount to pay</small><b class="num">${inr(amt)}</b></div>
+  <button class="btn pri" ${sel.length?'':'disabled'} onclick="toCart2()">Continue (${sel.length})</button></div></div>
+ <div class="tools"><span class="btn">Group By: Vendor Level ▾</span><span class="sp"></span><span class="btn">Bulk Edit Amounts</span><span class="btn">Hold GST Amount</span><span class="btn">Reset ↺</span><span class="btn">Columns</span></div>
+ ${grp}</div></div></div>`;
+}
+function toCart2(){S.c2=S.c1.filter(id=>S.c1sel.has(id));S.overlay='c2';S.c2menu=null;render()}
+
+/* Cart 2 · Create Payment File */
+function cart2HTML(){
+ const P=payments();const bills=S.c2.length,amt=P.reduce((s,p)=>s+p.amount,0);
+ const rows=P.map(p=>{const a=accById(p.acctId),v=vendorOf(p.vendorId);return `<tr><td>${plainVendor(v)}</td><td>${accountCell(a)}</td>
+  <td style="position:relative"><button class="x" aria-label="Payment options" onclick="S.c2menu=S.c2menu==='${p.id}'?null:'${p.id}';render()">⋮</button>${S.c2menu===p.id?`<div class="menu"><button onclick="rmPayment('${p.acctId}')">Remove from payment file</button></div>`:''}</td>
+  <td class="num">${p.bills.length}</td><td>${IC.file.replace('<svg','<svg style="color:var(--accent)"')}</td><td class="r num">${inr(p.amount)}</td><td><u>${p.due}</u></td><td>NEFT, Internal Transfer</td></tr>`}).join('');
+ return `<div class="ov"><div class="ovp big" role="dialog" aria-modal="true" aria-labelledby="c2t"><div class="ovh"><h2 id="c2t">Create Payment File</h2><button class="iconbtn" onclick="S.overlay='c1';render()" aria-label="Back to Select Bills to Pay">${IC.x}</button></div>
+ <div class="ovb"><div class="toprow">${bankMini(false)}<div class="sumtile"><div class="stat"><small>No of bills</small><b class="num">${bills}</b></div><div class="stat"><small>No of payments</small><b class="num">${P.length}</b></div><div class="stat"><small>Amount to pay</small><b class="num">${inr(amt)}</b></div>
+  <button class="btn pri" ${P.length?'':'disabled'} onclick="createPay()">Create Pay (${P.length})</button></div></div>
+ <div class="tools"><span class="btn" style="color:var(--muted)">Group By: Vendor Level</span><span class="sp"></span><span class="btn">Pay on Date: Multiple <span style="color:var(--link)">Change</span></span><span class="btn">Payment Method: NEFT, Internal Transfer ▾</span><span class="btn">Refresh ↺</span><span class="btn">Columns</span></div>
+ <div><div class="avail"><span style="display:inline-flex;gap:8px;align-items:center"><span style="color:var(--ok);display:inline-flex;width:18px">${IC.okc}</span>${P.length} Available Payment(s)</span><span>Payment Amount: <span class="num">${inr(amt)}</span></span></div>
+ <div class="tw"><table><thead><tr><th>Beneficiary</th><th>Beneficiary account</th><th></th><th>#Bills</th><th>Inv</th><th class="r">Amount</th><th>Pay on date</th><th>Payment method</th></tr></thead><tbody>${rows||'<tr><td colspan="8" class="empty">No payments in this file.</td></tr>'}</tbody></table></div></div>
+ <p class="meta" style="margin:0">Hover the shield next to an account to see its verification status and name match.</p></div></div></div>`;
+}
+function rmPayment(acctId){S.c2=S.c2.filter(id=>S.bills.find(b=>b.id===id).acctId!==acctId);S.c2menu=null;toast('Payment removed from this file. Its bills stay in Ready To Pay.');render()}
+
+/* Pending On Me */
+function viewPending(){
+ const ids=S.pending.map(p=>p.id),n=S.pendSel.size,tv=S.pending.reduce((s,p)=>s+p.amount,0);
+ const rows=S.pending.map(p=>{const v=vendorOf(p.vendorId),a=accById(p.acctId);return `<tr>
+  <td><input type="checkbox" class="cb" ${S.pendSel.has(p.id)?'checked':''} onchange="tgl(S.pendSel,'${p.id}')" aria-label="Select payment"></td>
+  <td>${plainVendor(v)}</td><td>${accountCell(a)}</td><td class="r num">${inr(p.amount)}</td><td>${p.payOn}</td>
+  <td><span class="chip b-none">${p.status}</span></td><td>${esc(p.createdBy)}</td>
+  <td style="white-space:nowrap;text-align:right"><button class="sqbtn" onclick="rejectPay('${p.id}')" aria-label="Reject">${IC.x}</button> <button class="arrow" onclick="openPayment('${p.id}')" aria-label="Open payment">›</button></td></tr>`}).join('');
+ return topbar('Payments / Pending On Me','<button class="btn sm">▶ Guides</button>')+balcard()+
+  `<div class="ltabs"><span class="t">ICICI A/C xx3121 <span class="pill">${S.pending.length}</span></span><span class="sp"></span>${n?`<button class="btn pri" onclick="authorise([...S.pendSel])">Authorise (${n})</button>`:''}<button class="btn">Direct Pay</button></div>
+  <div class="filters"><span class="muted">Filters:</span><span class="fchip">Pending Approval <span class="sq"></span></span><span class="fchip">Pending Auth <span class="sq"></span></span><span class="fchip">More Filters ▾</span><span style="flex:1"></span><span class="fchip">Sort By: Recommended ▾</span></div>
+  <div class="filters" style="justify-content:space-between"><div class="stats" style="margin:0"><div class="stat teal"><small>Total Count</small><b class="num">${S.pending.length}</b></div><div class="stat amb"><small>Total Value</small><b class="num">${inr(tv)}</b></div></div><button class="btn">Export</button></div>
+  <div class="tw"><table><thead><tr><th><input type="checkbox" class="cb" ${ids.length&&ids.every(i=>S.pendSel.has(i))?'checked':''} onchange="tglAll(S.pendSel,${JSON.stringify(ids).replace(/"/g,"'")})" aria-label="Select all"></th><th>Beneficiary</th><th>Beneficiary account</th><th class="r">Payment amount</th><th>Pay on</th><th>Status</th><th>Created by</th><th class="r">Actions</th></tr></thead>
+  <tbody>${rows||'<tr><td colspan="8" class="empty">Nothing pending on you.</td></tr>'}</tbody></table></div>
+  <p class="meta" style="margin-top:10px">Select payments and Authorise, or open one with › to authorise from L1. Warnings check each account's current status at Authorise.</p>`;
+}
+function rejectPay(id){S.pending=S.pending.filter(p=>p.id!==id);S.pendSel.delete(id);toast('Payment rejected.');render()}
+
+function viewTxns(){
+ const rows=S.txns.map(t=>{const v=vendorOf(t.vendorId),a=accById(t.acctId);const st=t.status;
+  return `<tr><td>${plainVendor(v)}</td><td>${accountCell(a)}</td><td class="r num">${inr(t.amount)}</td><td>${t.at}</td>
+  <td><span class="chip ${st==='Success'?'s-ver':st==='Failed'?'b-low':'b-none'}">${st}</span></td>
+  <td>${st==='Processing'?`<span class="proto" style="display:inline-flex;gap:6px;padding:4px 6px"><button class="btn sm" onclick="settle('${t.id}','Success')">Mark success</button><button class="btn sm" onclick="settle('${t.id}','Failed')">Mark failed</button></span>`:''}</td></tr>`}).join('');
+ return topbar('Payments / All Transactions')+
+ `<div class="proto" style="margin-bottom:12px">Prototype control: settle a payment as Success or Failed to test repeat-payment behaviour. A success counts toward suppressing the risky-account warning for that account; a failure doesn't.</div>
+ <div class="tw"><table><thead><tr><th>Beneficiary</th><th>Beneficiary account</th><th class="r">Amount</th><th>Authorised</th><th>Status</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="empty">No authorised payments yet. Authorise one from Pending On Me.</td></tr>'}</tbody></table></div>`;
+}
+function settle(id,st){const t=S.txns.find(x=>x.id===id);t.status=st;const a=accById(t.acctId);
+ if(st==='Success'){const before=riskReason(a);a.successCount++;if(before&&!riskReason(a))toast(`${acctLabel(a)} has ${a.successCount} successful payment${a.successCount>1?'s':''}. Later payments to it won't show the warning.`);else toast('Payment marked Success.')}
+ else toast('Payment marked Failed. The warning keeps showing for this account.');render()}
+
+/* ---------------- drawers (L1) ---------------- */
+function openVendor(id){S.drawer={type:'vendor',id};render()}
+function openPayment(id){S.drawer={type:'payment',id};render()}
+function closeDrawer(){S.drawer=null;render()}
+function attemptsTable(key){
+ const L=S.log.filter(l=>l.key===key);if(!L.length)return '';
+ return `<details class="attempts"><summary>Verification attempts (${L.length})</summary><div class="tw" style="margin-top:6px"><table><thead><tr><th>When</th><th>By</th><th>Bank response</th><th>Outcome</th></tr></thead><tbody>${L.map(l=>`<tr><td>${l.at}</td><td>${esc(l.by)}</td><td>${esc(l.msg)}${l.score!=null?' · '+l.score+'%':''}</td><td>${esc(l.outcome)}</td></tr>`).join('')}</tbody></table></div></details>`;
+}
+function bankCard(v,a){
+ const flagged=a.status==='Manually Verified';
+ return `<div class="bank"><div class="bh"><span style="width:20px;display:inline-flex">${IC.bankI}</span><b>${acctLabel(a)}</b><span class="active-chip">Active</span>${statusChip(a.status)}<span class="sp"></span><span class="toggle" aria-hidden="true"></span></div>
+ <div class="kv"><div><small>Account number</small><span class="mono">${a.acno}</span></div><div><small>Account name as per Mysa</small><span>${esc(a.nameMysa)}</span></div>
+ <div><small>IFSC code</small><span class="mono">${a.ifsc}</span></div><div><small>Account name as per Bank</small><span>${a.nameBank?esc(a.nameBank):'<span class="muted">Not available</span>'}</span></div>
+ <div><small>Name match</small>${bandChip(a.score)}</div><div><small>Verification method</small><span>${a.status==='Verified'?'Bank verified':a.status==='Manually Verified'?'Manually verified':'—'}</span></div>
+ <div><small>Added by</small><span>${esc(a.addedBy)} on ${a.addedOn}</span></div><div><small>Verified by</small><span>${a.verifiedBy?esc(a.verifiedBy)+' on '+a.verifiedOn:''}</span></div>
+ ${a.doc?`<div style="grid-column:1/-1"><small>Supporting document · ${esc(a.doc.type)}</small><span style="display:inline-flex;gap:6px;align-items:center">${IC.file}${esc(a.doc.name)}</span></div>`:(a.status==='Manually Verified'?`<div style="grid-column:1/-1"><small>Supporting document</small><span class="muted">No document uploaded</span></div>`:'')}</div>
+ <div class="bf">${flagged?`<div class="flag">${IC.man}<span>Manually verified. This flag is permanent. ${riskReason(a)?'Payments to this account show a risky-account warning until one completes successfully.':'Warning suppressed after a successful payment.'}</span></div>`:
+  a.status==='Unverified'?`<div class="flag" style="color:var(--grey)">${IC.unv}<span>Vendor bank account not verified${a.note?' · '+esc(a.note):''}</span></div><span class="sp"></span><button class="btn sm" onclick="verifyExisting('${v.id}','${a.id}')">Verify</button>`:
+  a.score!=null&&a.score<30?`<div class="flag" style="color:var(--bad)">${IC.alert}<span>Verified on the legacy provider with a low name match. Payments show a warning.</span></div>`:
+  `<div class="flag" style="color:var(--ok)">${IC.ver}<span>Verified through BAV</span></div>`}</div>
+ </div>`;
+}
+function renderDrawer(){
+ const d=S.drawer;if(!d){$('#drawer').innerHTML='';return}
+ let html='';
+ if(d.type==='vendor'){const v=vendorOf(d.id);
+  const unsaved=S.log.filter(l=>l.vendorId===v.id&&!v.accounts.some(a=>a.acno+'|'+a.ifsc===l.key));
+  html=`<div class="dh"><span class="av">${initials(v.name)}</span><div><h2>${esc(v.name)}</h2><span style="border:1px solid var(--line2);border-radius:6px;padding:2px 8px;font-size:13px;color:var(--muted)">Not Mapped in ERP • <span style="color:var(--link)">Create</span></span></div><span class="sp"></span><button class="iconbtn" aria-label="More">⋮</button><button class="iconbtn" onclick="closeDrawer()" aria-label="Close">${IC.x}</button></div>
+  <div class="grid2" style="margin-bottom:6px"><div><b class="num" style="font-size:24px;font-weight:500">${inr(v.spend)}</b><div class="muted">Total paid this Month</div></div><div><b class="num" style="font-size:24px;font-weight:500">${inr(v.outstanding)}</b><div class="muted">Total outstanding</div></div></div>
+  <div class="tabs"><span class="on">Details</span><span>Statement</span></div>
+  <div class="sechead"><h3>Bank Accounts</h3><button class="link" onclick="openAdd({vendorId:'${v.id}'})">+ Add bank account</button></div>
+  ${v.accounts.map(a=>bankCard(v,a)).join('')||'<div class="bank empty">No bank accounts yet.</div>'}
+  <div class="sechead" style="margin-top:22px"><h3>Details</h3></div>
+  <div class="kv"><div><small>GSTIN</small><span class="mono">${v.gst}</span></div><div><small>State</small><span>${esc(v.state)}</span></div></div>`;
+ } else {const p=S.pending.find(x=>x.id===d.id);if(!p){S.drawer=null;return renderDrawer()}
+  const v=vendorOf(p.vendorId),a=accById(p.acctId);
+  html=`<div class="dh"><div><span class="meta">Direct payment · ${esc(p.title)}</span><h2 class="num">${inr(p.amount)}</h2><span class="chip b-none">${p.status}</span></div><span class="sp"></span><button class="iconbtn" onclick="closeDrawer()" aria-label="Close">${IC.x}</button></div>
+  <div class="kv" style="background:var(--sunken)"><div><small>Pay on</small><span>${p.payOn}</span></div><div><small>Created by</small><span>${esc(p.createdBy)}</span></div></div>
+  <div class="sechead" style="margin-top:20px"><h3>Vendor details</h3></div>
+  <div class="kv" style="border:1px solid var(--line)"><div><small>Vendor name</small><span>${esc(v.name)}</span></div><div><small>Bank details</small><span>${acctLabel(a)} · <span class="mono">${a.ifsc}</span></span></div>
+   <div><small>Account name as per bank</small><span>${a.nameBank?esc(a.nameBank):'—'}</span></div><div><small>Vendor GST</small><span class="mono">${v.gst}</span></div>
+   <div><small>Verification status</small>${statusChip(a.status)}</div><div><small>Name match</small>${bandChip(a.score)}</div>
+   <div><small>Verified by</small><span>${a.verifiedBy?esc(a.verifiedBy)+' on '+a.verifiedOn:''}</span></div><div><small>State of supply</small><span>${esc(v.state)}</span></div></div>
+  ${riskReason(a)?`<div class="banner warn" style="margin-top:14px">${IC.alert}<div><b>${REASON[riskReason(a)]}</b><span class="sub2">You'll be asked to confirm before authorising.</span></div></div>`:''}
+  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px"><button class="btn" onclick="rejectPay('${p.id}')">Reject</button><button class="btn pri" onclick="authorise(['${p.id}'])">Authorise</button></div>`;
+ }
+ $('#drawer').innerHTML=`<div class="scrim" onclick="closeDrawer()"></div><aside class="drawer" role="dialog" aria-modal="true">${html}</aside>`;
+}
+
+/* ---------------- Add bank account / BAV flow ---------------- */
+function openAdd(o){
+ S.M={type:'add',mode:'new',vendorId:o.vendorId,acctId:null,step:'details',
+   f:{acno:o.acno||'',acno2:o.acno||'',ifsc:o.ifsc||'',name:o.name||''},errs:{},resp:o.resp||'v92',r:null,outcome:null,
+   docType:'Cancelled cheque',file:null,chk:false,otp:'',bavRan:false,banner:null};
+ if(o.attempts!=null&&o.acno) S.attempts[o.acno+'|'+(o.ifsc||'').toUpperCase()]=o.attempts;
+ if(!S.drawer||S.drawer.id!==o.vendorId) S.drawer={type:'vendor',id:o.vendorId};
+ render();
+}
+function verifyExisting(vid,aid){
+ const a=accById(aid);
+ S.M={type:'add',mode:'existing',vendorId:vid,acctId:aid,step:a.score!=null?'result':'details',
+  f:{acno:a.acno,acno2:a.acno,ifsc:a.ifsc,name:a.nameMysa},errs:{},resp:'v92',
+  r:a.score!=null?{code:200,msg:'Valid Account',kind:'valid',score:a.score,nameBank:a.nameBank,method:a.method}:null,
+  outcome:null,docType:'Cancelled cheque',file:null,chk:false,otp:'',bavRan:a.score!=null,banner:null};
+ render();
+}
+const M=()=>S.M;
+const key=()=>M().f.acno+'|'+M().f.ifsc.toUpperCase();
+function setF(k,v){M().f[k]=(k==='ifsc'||k.startsWith('acno'))?v.toUpperCase():v;delete M().errs[k];
+ renderModalSoft() }
+function iciciWarn(){const f=M().f;return f.ifsc.toUpperCase().startsWith('ICIC')&&/^\d+$/.test(f.acno)&&f.acno.length<12}
+function logAttempt(r,outcome){
+ const m=M();S.log.push({key:key(),vendorId:m.vendorId,at:nowT(),by:ME,code:r.code,msg:r.msg,score:r.score??null,outcome});
+}
+function proceed(){
+ const m=M(),f=m.f,e={};
+ if(!f.acno) e.acno='Enter the account number.'; else if(!/^[A-Za-z0-9]+$/.test(f.acno)) e.acno='Account number can only contain letters and numbers.';
+ if(!f.acno2) e.acno2='Re-enter the account number.'; else if(f.acno2!==f.acno) e.acno2="Account numbers don't match.";
+ if(!f.ifsc) e.ifsc='Enter the IFSC code.';
+ if(!f.name.trim()) e.name='Enter the account holder name.';
+ m.errs=e;m.banner=null;if(Object.keys(e).length){renderModal();return}
+ runBav();
+}
+function runBav(){
+ const m=M();m.step='verifying';m.banner=null;renderModal();
+ setTimeout(()=>{
+  if(S.M!==m) return;
+  const base=R[m.resp];const r=Object.assign({},base);m.bavRan=true;
+  if(r.kind==='valid'){r.nameBank=nameAtBank(m.f.name,r.score);r.method=r.score>=75?'Penny-less':'Penny drop';m.r=r;m.step='result';logAttempt(r,'Result shown')}
+  else if(r.kind==='wrong'){m.r=r;m.step='details';m.resp='v92';m.errs={[r.field]:r.copy};m.banner={cls:'warn',t:'Check the highlighted details',s:'Correct the highlighted field and select Retry verification.'};logAttempt(r,'Edit details')}
+  else if(r.kind==='reject'){m.r=r;m.step='rejected';logAttempt(r,'Blocked from adding')}
+  else if(r.kind==='inproc'){m.r=r;m.step='inproc';logAttempt(r,'Already in progress')}
+  else {const k=key();S.attempts[k]=(S.attempts[k]||0)+1;m.r=r;m.gw=S.attempts[k];m.step='gateway';logAttempt(r,m.gw>3?'Manual verification offered':'Retry offered')}
+  renderModal();
+ },1100);
+}
+function choose(outcome){const m=M();m.outcome=outcome;if(outcome==='Manually Verified'){m.step='manual'}else if(m.mode==='existing'){return finishAdd()}else{m.step='otp'}renderModal()}
+function manualDone(){const m=M();if(!m.chk)return;m.outcome='Manually Verified';if(m.mode==='existing')return finishAdd();m.step='otp';renderModal()}
+function onFile(inp){
+ const f=inp.files[0];if(!f)return;const ok=/\.(pdf|jpe?g|png)$/i.test(f.name);
+ if(!ok){M().fileErr='Upload a PDF, JPG or PNG file.';M().file=null}else{M().fileErr=null;M().file=f.name}
+ renderModal();
+}
+function otpInput(i,el){
+ el.value=el.value.replace(/\D/g,'').slice(-1);const box=[...document.querySelectorAll('.otp input')];
+ if(el.value&&i<5)box[i+1].focus();M().otp=box.map(b=>b.value).join('');
+ const btn=$('#otpBtn');if(btn)btn.disabled=M().otp.length!==6;
+}
+function otpKey(i,ev){if(ev.key==='Backspace'&&!ev.target.value&&i>0){document.querySelectorAll('.otp input')[i-1].focus()}}
+function finishAdd(){
+ const m=M(),v=vendorOf(m.vendorId),r=m.r||{};const st=m.outcome;
+ const data={nameBank:r.nameBank??null,score:r.score??null,method:r.method??null,status:st,
+   verifiedBy:st==='Unverified'?null:ME,verifiedOn:st==='Unverified'?null:today(),
+   doc:st==='Manually Verified'&&m.file?{type:'Supporting document',name:m.file}:null};
+ if(m.mode==='existing'){const a=accById(m.acctId);
+   if(a.status==='Manually Verified'){}else Object.assign(a,data);delete a.note;
+   toast(`${acctLabel(a)} is now <b>${a.status}</b>.`);
+ } else {
+   const bank={HDFC:'HDFC',ICIC:'ICICI',SBIN:'SBI',UTIB:'Axis',KKBK:'Kotak',IDFB:'IDFC',YESB:'Yes Bank',CNRB:'Canara'}[m.f.ifsc.slice(0,4)]||m.f.ifsc.slice(0,4);
+   const a=acct(Object.assign({bank,acno:m.f.acno,ifsc:m.f.ifsc,nameMysa:m.f.name,addedBy:ME,addedOn:today()},data));
+   v.accounts.push(a);toast(`${acctLabel(a)} added as <b>${st}</b>.`);
+ }
+ const L=S.log.filter(l=>l.key===key());if(L.length)L[L.length-1].outcome='Added as '+st;
+ S.M=null;render();
+}
+function closeAdd(){
+ const m=M();
+ if(m&&m.type==='add'&&m.bavRan&&!['rejected','inproc'].includes(m.step)&&m.mode==='new'){
+   const L=S.log.filter(l=>l.key===key());if(L.length)L[L.length-1].outcome='Abandoned before OTP';
+   toast('Account not added. The verification attempt was logged; start again to add it.');
+ }
+ S.M=null;render();
+}
+
+function stepper(cur){
+ const order=M().mode==='existing'?['details','result']:['details','result','otp'];const lbl={details:'Enter details',result:'Bank verification',otp:'OTP'};
+ const idx={details:0,verifying:1,result:1,manual:1,gateway:1,rejected:1,inproc:1,otp:2}[cur];
+ return `<div class="steps">${order.map((s,i)=>`<span class="${i===idx?'on':i<idx?'done':''}">${i<idx?'✓ ':''}${lbl[s]}</span>`).join('')}</div>`;
+}
+function respSelect(){
+ const m=M();
+ return `<div class="proto"><label for="respSel">Prototype · Bureau response for next BAV call</label><select id="respSel" onchange="M().resp=this.value">${RGROUPS.map(([g,ks])=>`<optgroup label="${g}">${ks.map(k=>`<option value="${k}" ${m.resp===k?'selected':''}>${esc(rLabel(k))}</option>`).join('')}</optgroup>`).join('')}</select></div>`;
+}
+function compareBlock(r,f){ // live-app style account card: header + Mysa name / bank name / match
+ return `<div class="acard"><div class="acard-h">${IC.bankI.replace('<svg','<svg width="20" height="20"')}<span>Account number: ${esc(f.acno)} • ${esc(String(f.ifsc).toUpperCase())}</span></div>
+  <div class="acard-b"><div><span class="muted">Name as per Mysa:</span><span>${esc(f.name)}</span></div>
+  <div><span class="muted">Name as per bank:</span><span>${r.nameBank?esc(r.nameBank):'<span class="muted">Not available</span>'}</span></div>
+  <div><span class="muted">Name match:</span><span>${r.score!=null?bandChip(r.score):'<span class="chip b-none">No score</span>'}</span></div></div></div>`;
+}
+const BANKS={HDFC:['HDFC Bank','MUMBAI LOWER PAREL','MUMBAI'],ICIC:['ICICI Bank','CHENNAI CENOTAPH ROAD','CHENNAI'],SBIN:['State Bank of India','BENGALURU MG ROAD','BENGALURU'],UTIB:['Axis Bank','AHMEDABAD CG ROAD','AHMEDABAD'],KKBK:['Kotak Mahindra Bank','NEW DELHI CONNAUGHT PLACE','NEW DELHI'],IDFB:['IDFC FIRST Bank','GURUGRAM SECTOR 44','GURUGRAM'],YESB:['Yes Bank','JAIPUR MI ROAD','JAIPUR'],CNRB:['Canara Bank','HYDERABAD ABIDS','HYDERABAD']};
+const ifscOk=x=>/^[A-Z]{4}0[A-Z0-9]{6}$/.test(x||'');
+function bankPanel(){
+ const f=M().f,b=ifscOk(f.ifsc)&&!M().errs.ifsc?(BANKS[f.ifsc.slice(0,4)]||[f.ifsc.slice(0,4)+' Bank','MAIN BRANCH','—']):null;
+ if(!b) return '<div id="bankPanel"></div>';
+ return `<div id="bankPanel" class="bankpanel"><span class="muted">Bank name</span><span style="display:inline-flex;gap:8px;align-items:center"><span class="banklogo">${b[0][0]}</span>${esc(b[0])}</span><span class="muted">Bank branch</span><span>${esc(b[1])}</span><span class="muted">Bank city</span><span>${esc(b[2])}</span></div>`;
+}
+function addModalHTML(){
+ const m=M(),f=m.f;let res='',foot='';
+ // fields stay editable only before BAV and when the bank says the data is wrong
+ const editable=m.mode==='new'&&m.step==='details';
+ const icw=iciciWarn()?`<span class="w" id="iciciW">${IC.alert.replace('<svg','<svg width="14" height="14"')}The account number may contain leading zeros. Please check and re-enter the account number.</span>`:'<span id="iciciW"></span>';
+ const ff=(k,l,extra='',tail='')=>{const pw=k==='acno2'&&!m.show2;
+  return `<div class="fwrap"><div class="ff ${m.errs[k]?'err':''} ${editable?'':'dis'}"><div class="in"><label for="f_${k}">${l}</label><input id="f_${k}" type="${pw?'password':'text'}" value="${esc(f[k])}" ${editable?'':'disabled'} oninput="setF('${k}',this.value)" ${k.startsWith('acno')?'autocomplete="off" style="text-transform:uppercase"':''} ${k==='ifsc'?'maxlength="11" style="text-transform:uppercase"':''}></div>${tail}</div>${m.errs[k]?`<span class="e">${esc(m.errs[k])}</span>`:''}${extra}</div>`};
+ const eye=`<button class="x" type="button" aria-label="${m.show2?'Hide':'Show'} account number" onclick="M().show2=!M().show2;renderModal()">${m.show2?'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>':'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>'}</button>`;
+ const tick=`<span id="ifscOk" style="color:var(--accent);display:inline-flex">${ifscOk(f.ifsc)&&!m.errs.ifsc?'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12l5 5 9-10"/></svg>':''}</span>`;
+ const form=`<div class="grid2">${ff('acno','Account number',icw)}${ff('acno2','Confirm Account number','',eye)}</div>
+   <div class="grid2">${ff('name','Name of account')}${ff('ifsc','IFSC Code','',tick)}</div>${bankPanel()}`;
+ const banner=(cls,ic,t,sub,meta)=>`<div class="banner ${cls}">${ic}<div><b>${t}</b>${sub?`<span class="sub2">${sub}</span>`:''}${meta?`<div class="meta" style="margin-top:4px">${meta}</div>`:''}</div></div>`;
+ const resTable=r=>`<div class="bavres"><div class="row"><small>Name as per bank</small><span>${r.nameBank?'<b>'+esc(r.nameBank)+'</b>':'<span class="muted">Not available</span>'}</span></div><div class="row"><small>Name match</small><span>${r.score!=null?bandChip(r.score):'<span class="chip b-none">No score</span>'}</span></div></div>`;
+
+ if(m.step==='details'){
+  res=(m.banner?banner(m.banner.cls,IC.alert,m.banner.t,m.banner.s):'')+respSelect();
+  foot=`<button class="btn" onclick="closeAdd()">Cancel</button><button class="btn pri" onclick="proceed()">${m.r&&m.r.kind==='wrong'?'Retry verification':'Proceed'}</button>`;
+ } else if(m.step==='verifying'){
+  res=`<div class="banner info"><div class="spin" style="width:18px;height:18px;border-width:2px;margin:0"></div><div><b>Verifying with the bank</b><span class="sub2">Checking the account through Bureau. This takes a few seconds.</span></div></div>`;
+ } else if(m.step==='rejected'){
+  res=banner('bad',IC.alert,"This account can't be added",esc(m.r.copy));
+  foot=`<button class="btn" onclick="closeAdd()">Cancel</button>`;
+ } else if(m.step==='inproc'){
+  res=banner('info',IC.info,'Verification already in progress','A verification request for this account is already running. Try again in a few minutes.')+respSelect();
+  foot=`<button class="btn" style="margin-right:auto" onclick="closeAdd()">Cancel</button><button class="btn" onclick="choose('Unverified')">Skip verification and add account</button><button class="btn pri" onclick="runBav()">Retry</button>`;
+ } else if(m.step==='gateway'){
+  const left=Math.max(0,4-m.gw),over=left===0;
+  res=over?banner('bad',IC.alert,'The bank is not responding. You can verify this account manually.','All 3 retries failed.')
+   :banner('warn',IC.alert,"We couldn't reach the bank right now. Please try again.",`You can retry ${left} more time${left>1?'s':''}. After that you can verify the account manually.`)+respSelect();
+  foot=`<button class="btn" style="margin-right:auto" onclick="closeAdd()">Cancel</button><button class="btn" onclick="choose('Unverified')">Skip verification and add account</button>`+
+   (over?`<button class="btn pri" onclick="choose('Manually Verified')">Manually verify</button>`:`<button class="btn pri" onclick="runBav()">Retry (${left} left)</button>`);
+ } else if(m.step==='result'){
+  const b=band(m.r.score);
+  const ban={high:['ok',IC.okc,'Account verified by the bank','The name at the bank closely matches the name you entered.'],
+   mid:['warn',IC.alert,'Partial name match','The account is valid but the name at the bank only partly matches. Check it before you verify.'],
+   low:['bad',IC.alert,'Name mismatch','The account exists but the name at the bank does not match. Verify it manually with a supporting document, or skip verification.']}[b];
+  res=banner(ban[0],ban[1],ban[2],ban[3])+compareBlock(m.r,f)+`<div style="font-weight:600">Have you verified these details?</div>`;
+  const skip=m.mode==='new'?`<button class="btn" onclick="choose('Unverified')">Skip verification and add account</button>`:`<button class="btn" onclick="closeAdd()">Keep unverified</button>`;
+  foot=b==='low'?`${skip}<button class="btn pri" onclick="choose('Manually Verified')">Manually verify</button>`:`${skip}<button class="btn pri" onclick="choose('Verified')">Yes, verify account</button>`;
+ }
+ let body;
+ if(m.step==='manual'){body=manualBody(m,f);foot=`<button class="btn" onclick="closeAdd()">Cancel</button><button class="btn pri" ${m.chk?'':'disabled'} onclick="manualDone()">Manually verify the account</button>`}
+ else if(m.step==='otp'){
+  body=`<div class="banner info">${IC.info}<div><b>Confirm with OTP</b><span class="sub2">We sent a 6-digit OTP to +91 98xxxxx421. After OTP, this account is saved as <b>${m.outcome}</b>.</span></div></div>
+   ${otpBoxes()}<div class="meta">Prototype: any 6 digits work. <button class="link" onclick="toast('OTP resent.')">Resend OTP</button></div>`;
+  foot=`<button class="btn" onclick="closeAdd()">Cancel</button><button class="btn pri" id="otpBtn" disabled onclick="finishAdd()">Verify OTP</button>`;
+ } else body=form+(res?`<div class="divider"></div>${res}`:'');
+ const title=m.mode==='existing'?'Verify Account':'Add Account';
+ const sub=m.mode==='existing'?`For ${esc(vendorOf(m.vendorId).name)}`:'A 30-minute cool-off period will apply once the account is added';
+ return `<div class="modal addm" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="mh"><div style="flex:1"><h3 id="mt">${title}</h3><p>${sub}</p></div><button class="x" onclick="closeAdd()" aria-label="Close">${IC.x}</button></div>
+  <div class="mb">${body}</div>${foot?`<div class="mf">${foot}</div>`:''}</div>`;
+}
+function otpBoxes(){return `<div class="otp">${[0,1,2,3,4,5].map(i=>`<input inputmode="numeric" maxlength="1" aria-label="OTP digit ${i+1}" oninput="otpInput(${i},this)" onkeydown="otpKey(${i},event)">`).join('')}</div>`}
+function manualBody(m,f){
+ return `<div class="banner warn">${IC.man}<div><b>Manual verification</b><span class="sub2">The account will be saved as Manually Verified and stays flagged permanently, even if a later BAV returns a high score.</span></div></div>
+  ${compareBlock(m.r||{},f)}
+  <p style="margin:0">Please add a cancelled cheque or a supporting document to verify the account manually. <span class="muted">(Optional)</span></p>
+  ${m.file?`<div class="drop has"><span style="display:inline-flex;gap:8px;align-items:center">${IC.file}${esc(m.file)}</span><button class="link" onclick="M().file=null;renderModal()">Remove</button></div>`
+   :`<label class="drop" for="docIn" style="cursor:pointer">${IC.up}<b>Upload document</b><span class="meta">Cancelled cheque or supporting document · PDF, JPG or PNG · optional</span><input id="docIn" type="file" accept=".pdf,.jpg,.jpeg,.png" hidden onchange="onFile(this)"></label>`}
+  ${m.fileErr?`<span class="e" style="color:var(--bad);font-size:12.5px">${m.fileErr}</span>`:''}
+  <label class="check"><input type="checkbox" class="cb" ${m.chk?'checked':''} onchange="M().chk=this.checked;renderModal()">I am manually verifying this account</label>`;
+}
+function renderModalSoft(){ // keep focus while typing; refresh inline bits only
+ const w=$('#iciciW');if(!w)return;
+ w.outerHTML=iciciWarn()?`<span class="w" id="iciciW">${IC.alert.replace('<svg','<svg width="14" height="14"')}The account number may contain leading zeros. Please check and re-enter the account number.</span>`:'<span id="iciciW"></span>';
+ const t=$('#ifscOk');if(t)t.innerHTML=ifscOk(M().f.ifsc)&&!M().errs.ifsc?'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12l5 5 9-10"/></svg>':'';
+ const bp=$('#bankPanel');if(bp)bp.outerHTML=bankPanel();
+ document.querySelectorAll('.ff.err').forEach(box=>{const inp=box.querySelector('input');const k=inp.id.slice(2);if(!M().errs[k]){box.classList.remove('err');const e=box.parentNode.querySelector('.e');if(e)e.remove()}});
+}
+
+/* ---------------- Bulk verify (Cart 2 → Create Pay) ---------------- */
+let pendingCreate=null;
+function createPay(){
+ const items=payments();pendingCreate=items;S.c2menu=null;
+ const unv=[...new Set(items.map(p=>p.acctId).filter(id=>accById(id).status==='Unverified'))];
+ if(unv.length){S.M={type:'bulk',ids:unv,sel:new Set(),conflict:null,phase:'list',queue:[],qi:0,chk:false,docs:{},docType:'Cancelled cheque',file:null,fchk:false,running:null};render()}
+ else warnOrDo('create',items);
+}
+function bulkBandOf(id){return band(accById(id).score)}
+function bulkToggle(id){
+ const B=M(),b=bulkBandOf(id);
+ if(B.sel.has(id)){B.sel.delete(id);B.conflict=null;return renderModal()}
+ const cur=B.sel.size?bulkBandOf([...B.sel][0]):null;
+ if(cur&&cur!==b){B.conflict={id,b,cur};return renderModal()}
+ B.sel.add(id);renderModal();
+}
+function bulkClearSelect(){const B=M();B.sel=new Set([B.conflict.id]);B.conflict=null;renderModal()}
+function bulkStart(ids){
+ const B=M();B.sel=new Set(ids);B.conflict=null;const b=bulkBandOf(ids[0]);B.chk=false;
+ if(b==='low'){B.queue=ids;B.qi=0;B.file=null;B.fchk=false;B.docType='Cancelled cheque';B.phase='manual'}
+ else B.phase='confirm';
+ renderModal();
+}
+function bulkRunBav(id){
+ const B=M();B.running=id;renderModal();
+ setTimeout(()=>{const a=accById(id);a.score=88;a.nameBank=a.nameMysa.toUpperCase();a.method='Penny-less';delete a.note;
+  S.log.push({key:a.acno+'|'+a.ifsc,vendorId:vendorOfAcc(id).id,at:nowT(),by:ME,code:200,msg:'Valid Account',score:88,outcome:'Result shown (bulk verify)'});
+  B.running=null;renderModal();toast(`BAV returned 88% for ${acctLabel(a)}. It moved to the high-match group.`)},1000);
+}
+function bulkManualNext(){
+ const B=M();if(!B.fchk)return;
+ B.docs[B.queue[B.qi]]=B.file?{type:'Supporting document',name:B.file}:null;
+ if(B.qi<B.queue.length-1){B.qi++;B.file=null;B.fchk=false;B.docType='Cancelled cheque';renderModal()}
+ else{bulkApply()}
+}
+function bulkApply(){
+ const B=M();const ids=[...B.sel];const b=bulkBandOf(ids[0]);
+ ids.forEach(id=>{const a=accById(id);
+  if(b==='low'){a.status='Manually Verified';a.doc=B.docs[id]}else a.status='Verified';
+  a.verifiedBy=ME;a.verifiedOn=today();
+  const L=S.log.filter(l=>l.key===a.acno+'|'+a.ifsc);if(L.length)L[L.length-1].outcome='Verified in bulk as '+a.status;
+ });
+ toast(`${ids.length} account${ids.length>1?'s':''} saved as <b>${b==='low'?'Manually Verified':'Verified'}</b>.`);
+ B.sel=new Set();B.phase='list';renderModal();
+}
+function groupCta(B,b,ids){
+ const open=ids.filter(id=>accById(id).status==='Unverified');
+ if(!open.length) return `<span class="gcta chip s-ver">All verified</span>`;
+ if(b==='none') return `<button class="btn sm gcta" ${B.running?'disabled':''} onclick="bulkRunAll(${JSON.stringify(open).replace(/"/g,"'")})">Run BAV for all (${open.length})</button>`;
+ const sel=open.filter(id=>B.sel.has(id));
+ const list=sel.length?sel:open;
+ return `<button class="btn sm pri gcta" onclick="bulkStart(${JSON.stringify(list).replace(/"/g,"'")})">${sel.length?`Verify selected (${sel.length})`:`Verify all (${open.length})`}</button>`;
+}
+function bulkRunAll(ids){
+ const B=M();B.running=ids[0];renderModal();
+ setTimeout(()=>{ids.forEach(id=>{const a=accById(id);a.score=88;a.nameBank=a.nameMysa.toUpperCase();a.method='Penny-less';delete a.note;
+   S.log.push({key:a.acno+'|'+a.ifsc,vendorId:vendorOfAcc(id).id,at:nowT(),by:ME,code:200,msg:'Valid Account',score:88,outcome:'Result shown (bulk verify)'})});
+  B.running=null;renderModal();toast(`BAV ran for ${ids.length} account${ids.length>1?'s':''}. Results moved to the high-match group.`)},1000);
+}
+function bulkContinue(){S.M=null;warnOrDo('create',pendingCreate)}
+function bulkHTML(){
+ const B=M();let body='',foot='';
+ if(B.phase==='list'){
+  const groups=['high','mid','low','none'].map(b=>[b,B.ids.filter(id=>bulkBandOf(id)===b)]).filter(g=>g[1].length);
+  const hint={high:'One confirmation covers every selected account in this group.',mid:'Bulk-able. Check the partial name match before you confirm.',low:'Verification steps through the selection one account at a time (optional document each).',none:'No BAV result yet. Run BAV to get a name match.'};
+  const doneN=B.ids.filter(id=>accById(id).status!=='Unverified').length;
+  body=`
+  ${B.conflict?`<div class="conflict">${IC.alert.replace('<svg','<svg width="18" height="18"')}<span>Your selection is in the <b>${BAND_LBL[B.conflict.cur]}</b> group. Each group has a different confirmation step, so a selection can only cover one group. Clear it and select this account?</span><button class="btn sm" onclick="M().conflict=null;renderModal()">Keep current</button><button class="btn sm pri" onclick="bulkClearSelect()">Clear and select</button></div>`:''}
+  ${groups.map(([b,ids])=>`<div class="grp"><div class="band-h">${b==='none'?'<span class="chip b-none">No score</span>':`<span class="chip b-${b}">${BAND_LBL[b].split(' · ')[0]}</span>`}<b>${BAND_LBL[b].split(' · ')[1]||BAND_LBL[b]}</b><small>${hint[b]}</small>${groupCta(B,b,ids)}</div>
+   <div style="overflow-x:auto"><table><colgroup><col class="c0"><col><col><col class="c3"><col class="c4"></colgroup><thead><tr><th></th><th>Beneficiary name</th><th>Name as per bank</th><th>Name match</th><th>Action</th></tr></thead><tbody>${ids.map(id=>{const a=accById(id),v=vendorOfAcc(id);const done=a.status!=='Unverified';
+    return `<tr><td>${b==='none'||done?'':`<input type="checkbox" class="cb" ${B.sel.has(id)?'checked':''} onchange="bulkToggle('${id}')" aria-label="Select ${esc(v.name)}">`}</td>
+    <td>${esc(v.name)}<div class="meta">${acctLabel(a)}</div></td><td>${a.nameBank?esc(a.nameBank):'<span class="muted">Not available</span>'}</td><td>${bandChip(a.score)}</td>
+    <td>${done?statusChip(a.status):b==='none'?(B.running===id?'<span class="muted">Running…</span>':`<button class="link" onclick="bulkRunBav('${id}')">Run BAV</button>`):`<button class="link" onclick="bulkStart(['${id}'])">Verify</button>`}</td></tr>`}).join('')}</tbody></table></div></div>`).join('')}`;
+  foot=`<span class="meta" style="margin-right:auto">${doneN} of ${B.ids.length} verified</span><button class="btn" onclick="S.M=null;render()">Cancel</button>
+   ${doneN===B.ids.length?`<button class="btn pri" onclick="bulkContinue()">Create Pay</button>`:`<button class="btn pri" onclick="bulkContinue()">Skip verification</button>`}`;
+ } else if(B.phase==='confirm'){
+  const ids=[...B.sel],b=bulkBandOf(ids[0]);
+  body=`<div class="banner ${b==='high'?'ok':'warn'}">${b==='high'?IC.okc:IC.alert}<div><b>${b==='high'?`Verify ${ids.length} high-match account${ids.length>1?'s':''}`:`Verify ${ids.length} partial-match account${ids.length>1?'s':''}`}</b><span class="sub2">${b==='high'?'One confirmation covers all of these accounts.':'The names at the bank only partly match. Check each pair before you confirm.'}</span></div></div>
+  <div class="tw"><table><thead><tr><th>Beneficiary</th><th>Name entered</th><th>Name as per bank</th><th>Match</th></tr></thead><tbody>${ids.map(id=>{const a=accById(id),v=vendorOfAcc(id);return `<tr><td>${esc(v.name)}<div class="meta">${acctLabel(a)}</div></td><td>${esc(a.nameMysa)}</td><td><b>${esc(a.nameBank)}</b></td><td>${bandChip(a.score)}</td></tr>`}).join('')}</tbody></table></div>
+  ${b==='mid'?`<label class="check"><input type="checkbox" class="cb" ${B.chk?'checked':''} onchange="M().chk=this.checked;renderModal()">I've checked the names at bank for these accounts</label>`:''}`;
+  foot=`<button class="btn" onclick="M().phase='list';renderModal()">Back</button><button class="btn pri" ${b==='mid'&&!B.chk?'disabled':''} onclick="bulkApply()">Verify ${ids.length} account${ids.length>1?'s':''}</button>`;
+ } else if(B.phase==='manual'){
+  const id=B.queue[B.qi],a=accById(id),v=vendorOfAcc(id);
+  const fake={file:B.file,chk:B.fchk,docType:B.docType,r:{nameBank:a.nameBank,score:a.score},fileErr:B.fileErr};
+  body=`<div class="steps"><span class="on">Account ${B.qi+1} of ${B.queue.length}</span><span>${esc(v.name)}</span></div>`+
+   manualBody(fake,{name:a.nameMysa,acno:a.acno,ifsc:a.ifsc})
+    .replace(/M\(\)\.docType=/g,'M().docType=').replace(/M\(\)\.file=null/g,'M().file=null').replace(/onFile\(this\)/,'onBulkFile(this)').replace(/M\(\)\.chk=this\.checked/,'M().fchk=this.checked');
+  foot=`<button class="btn" onclick="M().phase='list';renderModal()">Back</button><button class="btn pri" ${B.fchk?'':'disabled'} onclick="bulkManualNext()">${B.qi<B.queue.length-1?'Manually verify and next':'Manually verify'}</button>`;
+ }
+ return `<div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="bt"><div class="mh"><div style="flex:1"><h3 id="bt">Some bank accounts aren't verified</h3><p>You can verify these accounts now or continue creating the payment</p></div><button class="x" onclick="S.M=null;render()" aria-label="Close">${IC.x}</button></div><div class="mb">${body}</div><div class="mf">${foot}</div></div>`;
+}
+function onBulkFile(inp){const f=inp.files[0];if(!f)return;const B=M();if(/\.(pdf|jpe?g|png)$/i.test(f.name)){B.file=f.name;B.fileErr=null}else{B.file=null;B.fileErr='Upload a PDF, JPG or PNG file.'}renderModal()}
+
+/* ---------------- Warning modal (Create Pay + Authorise) ---------------- */
+function warnOrDo(ctx,items){
+ const flagged=items.map(it=>({it,reason:riskReason(accById(it.acctId))})).filter(x=>x.reason);
+ if(!flagged.length) return ctx==='create'?doCreate(items):doAuth(items);
+ S.M={type:'warn',ctx,items,flagged,chk:false,open:{}};render();
+}
+function warnHTML(){
+ const W=M(),n=W.flagged.length,all=n===W.items.length;
+ const groups=['low','manual','unverified'].map(r=>[r,W.flagged.filter(f=>f.reason===r)]).filter(g=>g[1].length);
+ const body=`<p style="margin:0">${n===1&&W.items.length===1?'This payment is':`<b>${n}</b> of the ${W.items.length} selected payments are`} going to accounts with a low name match, manual verification or no verification. Are you sure you want to ${W.ctx==='create'?'make':'authorise'} ${n===1&&W.items.length===1?'this payment':'these payments'}?</p>
+ ${groups.map(([r,fs])=>{const tot=fs.reduce((s,f)=>s+f.it.amount,0);const open=W.open[r];
+  return `<div class="why ${open?'open':''}"><button onclick="M().open['${r}']=!M().open['${r}'];renderModal()" aria-expanded="${!!open}">${IC.chev}<b>${REASON[r]}</b><span class="chip b-none num">${fs.length}</span><span class="num">${inr(tot)}</span></button>
+  ${open?`<div class="inner"><table><thead><tr><th>Beneficiary</th><th>Account</th><th>Account name as per bank</th><th>Name match</th><th class="r">Amount</th></tr></thead><tbody>${fs.map(f=>{const a=accById(f.it.acctId),v=vendorOf(f.it.vendorId);return `<tr><td>${esc(v.name)}</td><td>${esc(a.bank)} xx${last4(a.acno)}</td><td>${a.nameBank?esc(a.nameBank):'—'}</td><td>${bandChip(a.score)}</td><td class="r num">${inr(f.it.amount)}</td></tr>`}).join('')}</tbody></table></div>`:''}</div>`}).join('')}
+ <label class="check"><input type="checkbox" class="cb" ${W.chk?'checked':''} onchange="M().chk=this.checked;renderModal()">I have reviewed these accounts and want to proceed.</label>`;
+ const foot=`<button class="btn" style="margin-right:auto" onclick="S.M=null;render()">Go back</button>${all?'':`<button class="btn" onclick="warnRemove()">Remove flagged &amp; proceed</button>`}<button class="btn pri" ${W.chk?'':'disabled'} onclick="warnAll()">Proceed with all</button>`;
+ return `<div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="wt"><div class="mh"><span style="color:var(--warn);width:24px;display:inline-flex">${IC.alert}</span><div style="flex:1"><h3 id="wt">Review flagged beneficiary accounts</h3><p>${W.ctx==='create'?'Create Pay · Create Payment File':'Authorise · Pending On Me'}</p></div><button class="x" onclick="S.M=null;render()" aria-label="Close">${IC.x}</button></div><div class="mb">${body}</div><div class="mf">${foot}</div></div>`;
+}
+function warnAll(){const W=M();if(!W.chk)return;S.M=null;W.ctx==='create'?doCreate(W.items):doAuth(W.items)}
+function warnRemove(){const W=M();const fl=new Set(W.flagged.map(f=>f.it.id));const keep=W.items.filter(i=>!fl.has(i.id));S.M=null;
+ if(W.ctx==='create'){ // flagged payments leave the cart; their bills stay in Ready To Pay
+  W.flagged.forEach(f=>f.it.bills.forEach(bid=>{S.c2=S.c2.filter(x=>x!==bid);S.c1=S.c1.filter(x=>x!==bid)}));
+  doCreate(keep,fl.size);
+ } else doAuth(keep,fl.size)}
+let pseq=50;
+function doCreate(items,left=0){
+ items.forEach(p=>{S.pending.unshift({id:'p'+(pseq++),vendorId:p.vendorId,acctId:p.acctId,amount:p.amount,status:'In Auth',createdBy:ME,title:p.billNos.join(', '),payOn:p.due});
+  p.bills.forEach(bid=>{S.bills=S.bills.filter(x=>x.id!==bid);S.c2=S.c2.filter(x=>x!==bid);S.c1=S.c1.filter(x=>x!==bid)})});
+ S.overlay=null;
+ if(left){S.view='ready';toast(`${items.length} payment${items.length!==1?'s':''} sent to Pending On Me. ${left} flagged payment${left>1?'s were':' was'} removed and ${left>1?'are':'is'} back in Ready To Pay.`)}
+ else{S.view='pending';toast(`${items.length} payment${items.length!==1?'s':''} created and sent to Pending On Me.`)}
+ render();
+}
+function authorise(ids){const items=ids.map(id=>S.pending.find(p=>p.id===id)).filter(Boolean);warnOrDo('auth',items)}
+function doAuth(items,left=0){
+ items.forEach(p=>{S.pending=S.pending.filter(x=>x.id!==p.id);S.pendSel.delete(p.id);S.txns.unshift({id:'t'+p.id,vendorId:p.vendorId,acctId:p.acctId,amount:p.amount,at:nowT(),status:'Processing'})});
+ S.drawer=null;toast(`${items.length} payment${items.length!==1?'s':''} authorised.${left?` ${left} flagged payment${left>1?'s stay':' stays'} in Pending On Me.`:''} See All Transactions.`);render();
+}
+
+/* ---------------- Cases panel ---------------- */
+function preset(o){S.view='vendors';S.cases=false;S.overlay=null;openAdd(Object.assign({vendorId:'v10',name:'Lotus Hardware Pvt Ltd',acno:'50200011223344',ifsc:'HDFC0000240'},o))}
+function cartWith(vs){S.cases=false;S.view='ready';S.drawer=null;S.c2=S.bills.filter(b=>vs.includes(b.vendorId)).map(b=>b.id);S.c1=[...S.c2];S.c1sel=new Set(S.c1);S.overlay='c2';render()}
+const CASES=[
+ ['Add bank account · happy flow',[
+  ['3.1 Name match ≥75%','Valid account. Verify → OTP → Verified, or Skip → OTP → Unverified.',()=>preset({resp:'v92'})],
+  ['3.2 Name match 30%–<75%','Mismatch warning shown. Same Verify / Skip choices.',()=>preset({resp:'v58'})],
+  ['3.3 Name match <30%','Manual verification (optional document + checkbox) → OTP → Manually Verified, or Skip.',()=>preset({resp:'v18'})],
+  ['Edit details on wrong data','Invalid account number: the field shows the error and unlocks, then Retry verification.',()=>preset({resp:'invAcc'})]]],
+ ['User stories · add account',[
+  ['ICICI leading-zero validation','IFSC starts with ICIC and account has <12 digits → inline warning, Proceed stays enabled.',()=>preset({acno:'12345678',ifsc:'ICIC0001234',resp:'v92'})],
+  ['Bank rejects: Account Blocked','Red banner, fields locked, Cancel only. No account created.',()=>preset({resp:'blocked'})],
+  ['Bank rejects: Account Closed','',()=>preset({resp:'closed'})],
+  ['Bank rejects: NRE account','',()=>preset({resp:'nre'})],
+  ['Bank rejects: Fraud flagged (422)','',()=>preset({resp:'fraud'})],
+  ['Wrong data: Invalid account number','Inline error on Account Number; edit and Proceed retries. Attempt logged.',()=>preset({resp:'invAcc'})],
+  ['Wrong data: Invalid IFSC','Inline error on IFSC.',()=>preset({resp:'invIfsc'})],
+  ['Wrong data: 400 format invalid','',()=>preset({resp:'b400acc'})],
+  ['API gateway error, retries 1–3','"We couldn\'t reach the bank" → Retry (3 left / 2 left / 1 left) · Cancel. Skip also offered.',()=>preset({resp:'g503g',attempts:0})],
+  ['API gateway error, 3 retries used','Initial attempt + 2 retries already failed. Next failure offers Manually verify.',()=>preset({resp:'g504',attempts:3})],
+  ['Verification already under process','Retry, Skip verification and add account, or Cancel.',()=>preset({resp:'inproc'})],
+  ['User abandons flow','Run BAV, then close the modal before OTP. Account not added, attempt logged on Vendor L1.',()=>preset({resp:'v92'})]]],
+ ['Payment flow',[
+  ['Ready To Pay → Cart 1 → Cart 2','Select bills, Pay selected → Select Bills to Pay → Continue → Create Payment File → Create Pay.',()=>go('ready')]]],
+ ['Bulk verify · Cart 2',[
+  ['Create Pay with unverified accounts','≥75%: Greenleaf, Coastal Spices · 30–75%: Om Sai, Deccan · <30%: Bluewave, Evergreen · no score: Riya, Horizon. Each group has its own Verify all / Verify selected.',()=>cartWith(['v3','v12','v4','v13','v5','v14','v7','v17','v1','v11'])]]],
+ ['View',[
+  ['BAV status on Vendor L1','Vendor L0 stays as is. Status chip, name match, verification method, added by, verified by and document show only in L1.',()=>{S.cases=false;S.view='vendors';S.drawer={type:'vendor',id:'v2'};render()}],
+  ['Unverified account on Vendor L1','Verify from the account card (uses stored BAV result, no OTP).',()=>{S.cases=false;S.view='vendors';S.drawer={type:'vendor',id:'v4'};render()}],
+  ['Payments L0 account column','Shield icon next to the beneficiary account. Hover shows status and name match %.',()=>go('pending')],
+  ['Payments L1 vendor details card','Verification status, name match chip, verified by.',()=>{S.cases=false;S.view='pending';S.drawer={type:'payment',id:S.pending[0]?.id};render()}]]],
+ ['Payment warnings',[
+  ['Create Pay · mixed selection','Verified + manually verified + legacy low match. Remove flagged & proceed sends the clean ones to Pending On Me and returns flagged ones to Ready To Pay.',()=>cartWith(['v1','v11','v18','v16','v2','v15','v9','v6'])],
+  ['Create Pay · all flagged','Remove flagged & proceed is hidden.',()=>cartWith(['v2','v15','v9'])],
+  ['Authorise from Pending On Me','Select several and Authorise. Checks current status at Authorise.',()=>{S.cases=false;S.pendSel=new Set(S.pending.map(p=>p.id));go('pending')}],
+  ['Repeat payment suppression','Sunrise Prints is Manually Verified but already has a successful payment, so it shows no warning. Settle payments in All Transactions to test.',()=>cartWith(['v8','v2'])]]]
+];
+function toggleCases(){S.cases=!S.cases;render()}
+function renderCases(){
+ if(!S.cases){$('#cases').innerHTML='';return}
+ let n=0;
+ $('#cases').innerHTML=`<div class="scrim" onclick="toggleCases()"></div><aside class="cases" role="dialog" aria-label="User stories and cases">
+ <div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1"><h2>User stories &amp; cases</h2><p class="muted" style="margin:0;font-size:13px">From PPN · BAV Upgrades (M1). Each case opens the prototype in that state.</p></div><button class="x" onclick="toggleCases()" aria-label="Close">${IC.x}</button></div>
+ ${CASES.map(([g,items])=>`<div class="cgroup"><h4>${g}</h4>${items.map(([t,d])=>{const i=n++;return `<button class="case" onclick="S.cases=false;S.M=null;S.overlay=null;CASEFN[${i}]()"><div><b>${t}</b>${d?`<small>${d}</small>`:''}</div><span class="go">Open →</span></button>`}).join('')}</div>`).join('')}
+ <div class="cgroup"><h4>Open questions to settle in the PRD</h4>
+  <div class="proto" style="margin-bottom:8px"><label for="supp">Suppress warning after</label><select id="supp" onchange="S.suppressAfter=+this.value;render()"><option value="1" ${S.suppressAfter===1?'selected':''}>1 successful payment</option><option value="3" ${S.suppressAfter===3?'selected':''}>3 successful payments</option></select></div>
+  <p class="note">The warning table says "suppress after three successful payments"; the repeat-payment text and "Always flagged" say once a payment succeeds. Default here is 1.</p>
+  <p class="note">A payment can match more than one reason (a Manually Verified account is usually also &lt;30%). The breakdown places each payment in one group: Manually verified, then Unverified, then Low name match. Low name match catches Verified accounts below 30%, such as legacy Yes Bank results (Metro Cold Chain).</p>
+  <p class="note">Verifying an account that's already added (bulk verify, or Verify on Vendor L1) skips OTP. It only changes the verification status. OTP applies only when a new account is added.</p>
+  <p class="note">Unverified accounts with no score (gateway failure) have no band. Here they get a Run BAV action in the bulk modal.</p>
+  <p class="note">Gateway errors allow 3 retries (Retry shows how many are left). After the 3rd retry fails, Manually verify is offered. Skip verification stays available as a link.</p><p class="note">Edit details only appears when the bank says the data is wrong (invalid account number or IFSC). The fields unlock with the error shown on the field.</p></div>
+ <div class="cgroup"><h4>In scope but not detailed in the PRD yet</h4>
+  <p class="note">Bulk beneficiary account addition · Virtual account handling · AI scan with three-way comparison · Transaction handling for IMPS-incapable accounts (M2) · Maker-checker (M2). Not prototyped.</p></div>
+ <div class="cgroup"><h4>Response / status codes reference</h4><div class="tw"><table class="codes"><thead><tr><th>Code</th><th>Bureau message</th><th>Handled as</th></tr></thead><tbody>
+  ${Object.entries(R).filter(([k])=>!['v58','v18'].includes(k)).map(([k,r])=>`<tr><td class="mono">${r.code}</td><td>${esc(r.msg)}</td><td>${{valid:'Name match evaluation',wrong:'Edit details · Cancel',reject:'Cancel only',gateway:'Retry · Manual verification after 3',inproc:'Retry · Skip verification'}[r.kind]}</td></tr>`).join('')}
+  <tr><td class="mono">400</td><td>Account number / IFSC is missing</td><td>NA · blocked by required-field validation</td></tr></tbody></table></div></div>
+ </aside>`;
+}
+const CASEFN=CASES.flatMap(([,items])=>items.map(i=>i[2]));
+
+/* ---------------- render ---------------- */
+function renderModal(){
+ const m=S.M;if(!m){$('#modal').innerHTML='';return}
+ const html=m.type==='add'?addModalHTML():m.type==='bulk'?bulkHTML():warnHTML();
+ $('#modal').innerHTML=`<div class="mwrap">${html}</div>`;
+ const o=document.querySelector('.otp input');if(o)o.focus();
+}
+function render(){
+ renderSide();
+ $('#main').innerHTML={vendors:viewVendors,ready:viewReady,pending:viewPending,txns:viewTxns}[S.view]();
+ $('#overlay').innerHTML=S.overlay==='c1'?cart1HTML():S.overlay==='c2'?cart2HTML():'';
+ renderDrawer();renderCases();renderModal();
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(S.M){S.M.type==='add'?closeAdd():(S.M=null,render())}else if(S.cases)toggleCases();else if(S.drawer)closeDrawer();else if(S.overlay){S.overlay=S.overlay==='c2'?'c1':null;render()}}});
+render();
+let ftip=null;
+function showTip(el){hideTip();const box=el.querySelector('.tipbox');if(!box)return;ftip=document.createElement('div');ftip.className='ftip';ftip.innerHTML=box.innerHTML;document.body.appendChild(ftip);
+ const r=el.getBoundingClientRect(),w=ftip.offsetWidth,h=ftip.offsetHeight;let top=r.top-h-8;if(top<8)top=r.bottom+8;ftip.style.top=top+'px';ftip.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px'}
+function hideTip(){if(ftip){ftip.remove();ftip=null}}
+document.addEventListener('mouseover',e=>{const t=e.target.closest&&e.target.closest('.tip');if(t)showTip(t);else hideTip()});
+document.addEventListener('focusin',e=>{const t=e.target.closest&&e.target.closest('.tip');t?showTip(t):hideTip()});
+document.addEventListener('scroll',hideTip,true);
+</script>
+</body></html>
